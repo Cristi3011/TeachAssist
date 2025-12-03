@@ -1,0 +1,80 @@
+:root{
+	--primary:#3f51b5;
+	--primary-dark:#2c3e9f;
+	--bg:#f7f8fb;
+	--card:#ffffff;
+	--muted:#6b7280;
+}
+
+*{box-sizing:border-box}
+html,body,#app-root{
+	height:100%;
+}
+body{
+	margin:0;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+	background:var(--bg);
+	color:#111827;
+}
+
+.navbar{
+	width:100%;
+	padding:12px 20px;
+	background:transparent;
+	display:flex;
+	justify-content:space-between;
+	align-items:center;
+	gap:12px;
+}
+
+.brand{font-weight:700;color:var(--primary);font-size:18px;text-decoration:none;cursor:pointer}
+
+.nav-container{display:flex;gap:10px}
+.nav-btn{
+	padding:8px 14px;
+	background:var(--primary) !important;
+	color:#000 !important;
+	border:none;
+	border-radius:8px;
+	cursor:pointer;
+	font-weight:600;
+	min-width:64px;
+	text-align:center;
+}
+.nav-btn:hover{background:var(--primary-dark) !important}
+
+.page-center{
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	padding:32px 16px;
+	min-height:calc(100vh - 64px);
+}
+
+/* logged-in user wrapper in navbar */
+.user-wrapper{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.user-wrapper .user-name{display:inline-flex;align-items:center;line-height:1.2}
+.user-wrapper .nav-btn{padding:6px 10px;line-height:1.2}
+
+.card{
+	width:100%;
+	max-width:420px;
+	background:var(--card);
+	padding:28px;
+	border-radius:12px;
+	box-shadow:0 6px 18px rgba(15,23,42,0.08);
+}
+
+.card h2{margin:0 0 12px 0}
+
+.form-field{display:flex;flex-direction:column;margin-bottom:14px}
+.form-field label{font-size:13px;color:var(--muted);margin-bottom:6px}
+.form-field input{padding:10px 12px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px}
+
+.btn-primary{display:inline-block;padding:10px 14px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600}
+
+@media (max-width:480px){
+	.card{padding:20px;border-radius:10px}
+	.nav-container{gap:8px}
+	.nav-btn{padding:8px 10px;font-size:14px}
+}

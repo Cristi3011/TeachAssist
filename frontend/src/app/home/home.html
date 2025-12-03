@@ -1,0 +1,16 @@
+<div class="hero">
+  <div class="hero-inner">
+    <h1>TeachAssist</h1>
+    <p class="subtitle">Organize lessons. Assist students. Simplify teaching.</p>
+
+    <div class="hero-cta">
+      <ng-container *ngIf="!logged">
+        <a class="btn-primary" [routerLink]="['/register']">Get started</a>
+        <a class="btn-ghost" [routerLink]="['/login']">Sign in</a>
+      </ng-container>
+      <ng-container *ngIf="logged">
+        <a class="btn-primary" [routerLink]="['/']">Go to dashboard</a>
+      </ng-container>
+    </div>
+  </div>
+</div>

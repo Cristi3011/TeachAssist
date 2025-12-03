@@ -1,0 +1,23 @@
+<div class="page-center">
+	<div class="card">
+		<h2>Welcome back</h2>
+		<p style="color:var(--muted);margin-bottom:16px">Sign in to continue to TeachAssist.</p>
+
+		<form (submit)="onSubmit($event)">
+			<div class="form-field">
+				<label for="email">Email</label>
+				<input id="email" name="email" type="email" [(ngModel)]="model.email" required />
+			</div>
+
+			<div class="form-field">
+				<label for="password">Password</label>
+				<input id="password" name="password" type="password" [(ngModel)]="model.password" required />
+			</div>
+
+			<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+				<a [routerLink]="['/register']" style="color:var(--primary);text-decoration:none;font-weight:600">Create account</a>
+				<button class="btn-primary" type="submit">Sign in</button>
+			</div>
+		</form>
+	</div>
+</div>

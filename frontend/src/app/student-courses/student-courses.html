@@ -1,0 +1,17 @@
+<div class="page-center">
+  <div class="card">
+    <h2>Student — Available Courses</h2>
+    <p style="color:var(--muted)">Enroll in courses (demo stored in browser localStorage).</p>
+
+    <ul>
+      <li *ngFor="let c of courses; let i = index">
+        {{ c.title }} <small style="color:var(--muted)">- {{ c.created | slice:0:10 }}</small>
+        <button style="float:right" class="nav-btn" (click)="enroll(c)">Enroll</button>
+      </li>
+    </ul>
+
+    <div style="margin-top:18px; display:flex;gap:8px;justify-content:flex-end">
+      <a class="nav-btn" [routerLink]="['/']">Home</a>
+    </div>
+  </div>
+</div>

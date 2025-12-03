@@ -1,0 +1,20 @@
+<div class="page-center">
+  <div class="card">
+    <h2>Professor — Manage Courses</h2>
+    <p style="color:var(--muted)">Add courses (demo stored in browser localStorage).</p>
+
+    <div class="form-field">
+      <label>Course title</label>
+      <input [(ngModel)]="courseTitle" />
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn-primary" (click)="addCourse()">Add Course</button>
+    </div>
+
+    <hr style="margin:18px 0" />
+    <h3>All courses</h3>
+    <ul>
+      <li *ngFor="let c of courses">{{ c.title }} <small style="color:var(--muted)">- {{ c.created | slice:0:10 }}</small></li>
+    </ul>
+  </div>
+</div>
