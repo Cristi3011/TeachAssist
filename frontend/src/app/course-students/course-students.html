@@ -1,0 +1,27 @@
+<div class="students-page">
+  <div class="students-shell">
+    <div class="students-topbar">
+      <a class="back-link" [routerLink]="['/dashboard/course', courseId]">Inapoi la curs</a>
+    </div>
+
+    <div *ngIf="loading" class="status-box">Se incarca studentii...</div>
+    <div *ngIf="error" class="status-box status-box--error">{{ error }}</div>
+
+    <section class="students-card" *ngIf="!loading && !error">
+      <h1>Studenți</h1>
+      <p class="muted-copy" *ngIf="courseTitle">Curs: {{ courseTitle }}</p>
+
+      <div class="students-list" *ngIf="acceptedStudents.length > 0; else noAcceptedTpl">
+        <article class="student-item" *ngFor="let s of acceptedStudents; trackBy: trackById">
+          <strong>{{ s.username }}</strong>
+          <p>{{ s.studentEmail }}</p>
+          <span>Înscris în: {{ s.created_at | slice:0:10 }}</span>
+        </article>
+      </div>
+
+      <ng-template #noAcceptedTpl>
+        <p class="muted-copy">Nu exista studenti in acest curs momentan.</p>
+      </ng-template>
+    </section>
+  </div>
+</div>

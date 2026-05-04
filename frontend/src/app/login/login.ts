@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { AlertService } from '../shared/alert.service';
 
 @Component({
   selector: 'app-login',
@@ -13,15 +14,16 @@ import { FormsModule } from '@angular/forms';
 export class Login {
   model = { email: '', password: '' };
 
-  constructor(private router: Router) {
-    // if already logged in (localStorage), redirect to role page
+  private defaultRouteForRole(role?: string): string {
+    return (role || '').toLowerCase() === 'admin' ? '/admin' : '/dashboard';
+  }
+
+  constructor(private router: Router, private alerts: AlertService) {
     try {
       const raw = localStorage.getItem('teachassist_user');
       if (raw) {
         const user = JSON.parse(raw);
-        const role = (user?.role || 'student').toString().toLowerCase();
-        if (role === 'professor') this.router.navigate(['/professor']);
-        else this.router.navigate(['/student']);
+        this.router.navigate([this.defaultRouteForRole(user?.role)]);
       }
     } catch {}
   }
@@ -40,12 +42,12 @@ export class Login {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.message || 'Login failed');
+        this.alerts.error(data.message || 'Login failed');
         console.error('Login error', data);
         return;
       }
       if (data.message && data.message.toLowerCase().includes('invalid')) {
-        alert('Invalid credentials');
+        this.alerts.warning('Invalid credentials');
         return;
       }
       console.log('Login success', { username: data.user?.username, role: data.user?.role });
@@ -57,16 +59,11 @@ export class Login {
         window.dispatchEvent(new CustomEvent('auth:login', { detail: safe }));
       } catch {}
 
-      const role = data?.user?.role || 'student';
-      if (role.toLowerCase() === 'professor') {
-        this.router.navigate(['/professor']);
-      } else {
-        this.router.navigate(['/student']);
-      }
+      this.router.navigate([this.defaultRouteForRole(data.user?.role)]);
       
     } catch (err) {
       console.error(err);
-      alert('Network error during login');
+      this.alerts.error('Network error during login');
     }
   }
 }

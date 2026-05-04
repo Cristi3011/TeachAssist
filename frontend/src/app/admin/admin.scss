@@ -1,0 +1,271 @@
+:host {
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+
+}
+
+.admin-page {
+  min-height: calc(100vh - 64px);
+  padding: 26px 16px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(55, 99, 240, 0.1), transparent 40%),
+    radial-gradient(circle at 78% 8%, rgba(16, 185, 129, 0.12), transparent 35%),
+    linear-gradient(140deg, #eff4ff 0%, #f9fbff 48%, #eefbf6 100%);
+}
+
+.admin-shell {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+}
+
+.admin-header h1 {
+  margin: 0;
+  color: #1f2a44;
+  font-size: clamp(24px, 3.6vw, 36px);
+}
+
+.admin-header p {
+  margin-top: 8px;
+  color: #4b5563;
+}
+
+.admin-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.admin-card {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid #dbe3f0;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+.admin-card h2 {
+  margin: 0 0 8px;
+  color: #1f2a44;
+  font-size: 18px;
+}
+
+.admin-card p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.invite-intro {
+  margin-bottom: 10px;
+}
+
+.invite-form {
+  margin-bottom: 10px;
+}
+
+.invite-form-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.8fr auto;
+  gap: 8px;
+}
+
+.invite-input,
+.invite-select {
+  width: 100%;
+  border: 1px solid #cfd8e7;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+  color: #1f2a44;
+  background: #fff;
+}
+
+.invite-submit {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.invite-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.invites-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.invites-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e3e8f2;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.invites-meta {
+  margin-top: 5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.invite-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.invite-status--used {
+  background: #f3f4f6;
+  color: #4b5563;
+  border-color: #d1d5db;
+}
+
+.invite-delete {
+  border: 1px solid #ef4444;
+  background: #fff;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.users-intro {
+  margin-bottom: 10px;
+}
+
+.users-state {
+  font-size: 14px;
+}
+
+.users-state--error {
+  color: #b91c1c;
+}
+
+.users-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.users-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e3e8f2;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.users-email {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e6f7ef;
+  color: #0f766e;
+  border: 1px solid #c7ecdc;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.courses-intro {
+  margin-bottom: 10px;
+}
+
+.courses-admin-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.courses-admin-item {
+  padding: 10px;
+  border: 1px solid #e3e8f2;
+  border-radius: 10px;
+  background: #fbfdff;
+}
+
+.courses-admin-description {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.courses-admin-professor {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .invite-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .invites-item,
+  .users-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.denied-box {
+  width: min(680px, 100%);
+  margin: 40px auto 0;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid #dbe3f0;
+  border-radius: 14px;
+  padding: 24px 18px;
+}
+
+.denied-box h2 {
+  margin: 0 0 6px;
+  color: #1f2a44;
+}
+
+.denied-box p {
+  margin: 0;
+  color: #4b5563;
+}

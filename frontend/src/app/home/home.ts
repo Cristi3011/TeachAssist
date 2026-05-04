@@ -11,15 +11,40 @@ import { CommonModule } from '@angular/common';
 })
 export class Home {
   logged = false;
+  isStudent = false;
+  isTeacher = false;
 
   constructor() {
     try {
-      this.logged = !!localStorage.getItem('teachassist_user');
+      const raw = localStorage.getItem('teachassist_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.logged = true;
+        const role = (parsed?.role || 'student').toString().toLowerCase();
+        this.isTeacher = role === 'professor';
+        this.isStudent = role !== 'professor';
+      } else {
+        this.logged = false;
+        this.isTeacher = false;
+        this.isStudent = false;
+      }
     } catch {
       this.logged = false;
+      this.isTeacher = false;
+      this.isStudent = false;
     }
-    // update on auth events
-    window.addEventListener('auth:login', () => (this.logged = true));
-    window.addEventListener('auth:logout', () => (this.logged = false));
+
+    // update on auth events (login includes detail with safe user)
+    window.addEventListener('auth:login', (e: any) => {
+      this.logged = true;
+      const role = (e?.detail?.role || 'student').toString().toLowerCase();
+      this.isTeacher = role === 'professor';
+      this.isStudent = role !== 'professor';
+    });
+    window.addEventListener('auth:logout', () => {
+      this.logged = false;
+      this.isTeacher = false;
+      this.isStudent = false;
+    });
   }
 }

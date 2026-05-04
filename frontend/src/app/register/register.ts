@@ -2,26 +2,27 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AlertService } from '../shared/alert.service';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule], 
   templateUrl: './register.html',
   styleUrls: ['./register.scss'],
 })
 export class Register {
   model = { username: '', email: '', password: '', role: 'student' };
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private alerts: AlertService) {
     // redirect away from register when already logged in
     try {
       const raw = localStorage.getItem('teachassist_user');
       if (raw) {
         const user = JSON.parse(raw);
         const role = (user?.role || 'student').toString().toLowerCase();
-        if (role === 'professor') this.router.navigate(['/professor']);
-        else this.router.navigate(['/student']);
+        if (role === 'admin') this.router.navigate(['/admin']);
+        else this.router.navigate(['/dashboard']);
       }
     } catch {}
   }
@@ -29,7 +30,7 @@ export class Register {
   onSubmit(e: Event) {
     e?.preventDefault();
     if (!this.isFormValid()) {
-      alert('Please complete all required fields with valid values.');
+      this.alerts.warning('Please complete all required fields with valid values.');
       return;
     }
     this.submit();
@@ -40,10 +41,8 @@ export class Register {
     const e = (this.model.email || '').toString().trim();
     const p = (this.model.password || '').toString();
     if (!u || !e || !p) return false;
-    // basic email check
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
     if (!emailOk) return false;
-    // password minimum length
     if (p.length < 6) return false;
     return true;
   }
@@ -57,15 +56,25 @@ export class Register {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.message || 'Register failed');
+        this.alerts.error(data.message || 'Register failed');
         console.error('Register error', data);
         return;
       }
-      alert('Registered successfully');
-      console.log('Registered', data);
+
+      const user = {
+        username: data?.user?.username || this.model.username,
+        email: data?.user?.email || this.model.email,
+        role: (data?.user?.role || 'student').toString().toLowerCase(),
+      };
+
+      localStorage.setItem('teachassist_user', JSON.stringify(user));
+      window.dispatchEvent(new CustomEvent('auth:login', { detail: user }));
+
+      if (user.role === 'admin') await this.router.navigate(['/admin']);
+      else await this.router.navigate(['/dashboard']);
     } catch (err) {
       console.error(err);
-      alert('Network error during register');
+      this.alerts.error('Network error during register');
     }
   }
 }

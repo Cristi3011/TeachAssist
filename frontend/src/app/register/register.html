@@ -1,7 +1,7 @@
 <div class="page-center">
     <div class="card">
-        <h2>Create account</h2>
-        <p style="color:var(--muted);margin-bottom:16px">Join TeachAssist — quick setup.</p>
+        <h2>Înregistrează-te</h2>
+        <p style="color:var(--muted);margin-bottom:16px">Înregistrează-te pentru a continua</p>
 
         <form (submit)="onSubmit($event)">
             <div class="form-field">
@@ -15,21 +15,12 @@
             </div>
 
             <div class="form-field">
-                <label for="password">Password</label>
+                <label for="password">Parolă</label>
                 <input id="password" name="password" type="password" [(ngModel)]="model.password" required />
             </div>
 
-            
-            <div class="form-field">
-                <label for="role">I am a</label>
-                <select id="role" name="role" [(ngModel)]="model.role">
-                    <option value="student">Student</option>
-                    <option value="professor">Professor</option>
-                </select>
-            </div>
-
             <div style="display:flex;justify-content:flex-end;margin-top:8px">
-                <button class="btn-primary" type="submit" [disabled]="!isFormValid()">Register</button>
+                <button class="btn-primary" type="submit" [disabled]="!isFormValid()">Înregistrează-te</button>
             </div>
             
         </form>

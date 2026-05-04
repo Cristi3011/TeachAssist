@@ -30,6 +30,13 @@ export class UserService {
     return found;
   }
 
+  async findByUsername(username: string) {
+    const name = (username || '').toString().trim();
+    if (!name) return null;
+    const found = await this.usersRepository.findOne({ where: { username: name } });
+    return found;
+  }
+
   async findAll() {
     return this.usersRepository.find();
   }

@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './users/user.module';
+import { InvitationsModule } from './invitations/invitations.module';
+import { CoursesModule } from './courses/courses.module';
+import { EnrollmentsModule } from './enrollments/enrollments.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { AssignmentsModule } from './assignments/assignments.module';
 
 @Module({
   imports: [
@@ -11,10 +16,15 @@ import { UserModule } from './users/user.module';
       username: 'teachassist',
       password: 'Assistteachers',
       database: 'teachassist',
-      autoLoadEntities: true,  
+      autoLoadEntities: true,
       synchronize: true,
     }),
     UserModule,
+    InvitationsModule,
+    CoursesModule,
+    EnrollmentsModule,
+    AnnouncementsModule,
+    AssignmentsModule,
   ],
 })
 export class AppModule {}

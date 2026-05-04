@@ -1,0 +1,270 @@
+<div class="course-page">
+  <div class="course-shell">
+    <div class="course-topbar">
+      <a class="back-link" [routerLink]="['/dashboard']">Înapoi la dashboard</a>
+    </div>
+ 
+    <div *ngIf="loading" class="status-box">Se încarcă pagina cursului...</div>
+    <div *ngIf="error" class="status-box status-box--error">{{ error }}</div>
+
+    <ng-container *ngIf="!loading && course">
+      <section class="hero-card">
+        <div class="hero-head">
+          <div>
+            <p class="eyebrow">{{ role === 'professor' ? 'Administrare curs' : 'Cursul tău' }}</p>
+            <h1>{{ course.title }}</h1>
+            <p class="hero-description">{{ course.description || 'Fără descriere momentan.' }}</p>
+            <div class="hero-meta">
+              <span>Profesor: {{ course.professor }}</span>
+              <span>Creat: {{ formatShortDate(course.created_at) }}</span>
+            </div>
+          </div>
+
+          <div class="hero-actions" *ngIf="role === 'professor'">
+            <button class="menu-btn" type="button" (click)="toggleCourseMenu()" aria-label="Actiuni curs">...</button>
+            <div class="hero-menu" *ngIf="showCourseMenu">
+              <button type="button" (click)="openEditMode()" *ngIf="!canEditCourse">Modifica curs</button>
+              <button type="button" (click)="closeEditMode()" *ngIf="canEditCourse">Inchide modificarea</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="course-grid">
+        <section class="panel" *ngIf="role === 'professor' && canEditCourse">
+          <h2>Setări curs</h2>
+          <div class="form-field">
+            <label>Titlu</label>
+            <input [(ngModel)]="editModel.title" />
+          </div>
+          <div class="form-field">
+            <label>Descriere</label>
+            <textarea [(ngModel)]="editModel.description"></textarea>
+          </div>
+          <div class="edit-actions">
+            <button class="btn-primary" (click)="saveCourse()">Salveaza modificarile</button>
+            <button class="btn-danger" (click)="removeCourse()" [disabled]="loading">Sterge curs</button>
+          </div>
+        </section>
+
+        <section class="panel" *ngIf="role === 'professor' && canEditCourse">
+          <h2>Invită studenti</h2>
+          <div class="inline-row">
+            <input [(ngModel)]="inviteEmail" placeholder="email@student.com" />
+            <button class="btn-primary" (click)="sendInvitation()">Trimite</button>
+          </div>
+
+          <p *ngIf="lastInviteEmail" class="muted-copy">
+            Ultima invitatie: {{ lastInviteEmail }} ({{ lastInviteStatus }}) la {{ formatShortDate(lastInviteAt) }}
+          </p>
+
+          <div class="students-link-row">
+            <a class="btn-secondary" [routerLink]="['/dashboard/course', courseId, 'students']">Vezi studentii înscriși</a>
+          </div>
+
+          <div class="bulk-invite-block">
+            <h3>Invitare din CSV</h3>
+            <p class="muted-copy">CSV cu emailuri separate prin rand/virgula.</p>
+
+            <div class="inline-row inline-row--csv">
+              <input id="csvInviteInput" class="file-input-hidden" type="file" accept=".csv,text/csv" (change)="onCsvFileSelected($event)" />
+              <label class="btn-primary file-picker-btn" for="csvInviteInput">Alege fisier CSV</label>
+              <button class="btn-primary" (click)="sendBulkInvitationsFromCsv()" [disabled]="csvInviteInProgress">
+                {{ csvInviteInProgress ? 'Se proceseaza...' : 'Trimite invitatii' }}
+              </button>
+            </div>
+
+            <p *ngIf="csvFileName" class="muted-copy">Fisier selectat: {{ csvFileName }}</p>
+
+            <div *ngIf="csvInviteReport" class="bulk-report">
+              <div class="bulk-summary">
+                <span>Total: {{ csvInviteReport.summary.total }}</span>
+                <span>Trimise: {{ csvInviteReport.summary.created }}</span>
+                <span>Deja invitate: {{ csvInviteReport.summary.alreadyInvited }}</span>
+                <span>Deja inscrise: {{ csvInviteReport.summary.alreadyEnrolled }}</span>
+                <span>Invalide: {{ csvInviteReport.summary.invalid }}</span>
+                <span>Erori: {{ csvInviteReport.summary.errors }}</span>
+              </div>
+
+              <div class="bulk-results" *ngIf="csvInviteReport.results.length > 0">
+                <div class="bulk-result-item" *ngFor="let r of csvInviteReport.results; trackBy: trackByEmail">
+                  <span>{{ r.email }}</span>
+                  <span class="status-pill" [class.pending]="r.status === 'created'" [class.accepted]="r.status === 'already_invited' || r.status === 'already_enrolled'" [class.declined]="r.status === 'invalid_email' || r.status === 'error' || r.status === 'course_not_found'">
+                    {{ r.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel--wide">
+          <div class="section-head">
+            <h2>Flux curs</h2>
+            <div class="section-head-actions">
+              <button
+                *ngIf="role === 'professor'"
+                type="button"
+                class="announce-compose-btn"
+                (click)="toggleAnnouncementForm()"
+              >
+                <span class="pencil">✎</span>
+                {{ showAnnouncementForm ? 'Inchide' : 'Anunt nou' }}
+              </button>
+              <button
+                *ngIf="role === 'professor'"
+                type="button"
+                class="announce-compose-btn"
+                (click)="toggleAssignmentForm()"
+              >
+                <span class="pencil">✎</span>
+                {{ showAssignmentForm ? 'Inchide' : 'Tema / material nou' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="announce-form" *ngIf="role === 'professor' && showAnnouncementForm">
+            <div class="form-field">
+              <label>Titlu anunț</label>
+              <input [(ngModel)]="announceModel.title" />
+            </div>
+            <div class="form-field">
+              <label>Conținut</label>
+              <textarea [(ngModel)]="announceModel.content"></textarea>
+            </div>
+            <button class="btn-primary" (click)="createAnnouncement()">Publică anunț</button>
+          </div>
+
+          <div class="announce-form" *ngIf="role === 'professor' && showAssignmentForm">
+            <div class="form-field">
+              <label>Tip postare</label>
+              <select [(ngModel)]="assignmentModel.kind">
+                <option value="assignment">Tema</option>
+                <option value="material">Material</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Titlu</label>
+              <input [(ngModel)]="assignmentModel.title" />
+            </div>
+            <div class="form-field">
+              <label>Conținut</label>
+              <textarea [(ngModel)]="assignmentModel.description"></textarea>
+            </div>
+            <div class="form-field" *ngIf="assignmentModel.kind === 'assignment'">
+              <label>Deadline (opțional)</label>
+              <input type="date" [(ngModel)]="assignmentModel.dueDate" />
+            </div>
+            <button class="btn-primary" (click)="createAssignment()">Publica postarea</button>
+          </div>
+
+          <div class="announcements-list" *ngIf="feedItems.length > 0; else emptyFeed">
+            <article
+              class="announcement-card"
+              *ngFor="let item of feedItems; trackBy: trackByFeed"
+              [class.announcement-card--clickable]="item.type === 'assignment'"
+              [attr.tabindex]="item.type === 'assignment' ? 0 : null"
+              (click)="openAssignmentFromCard(item, $event)"
+              (keydown.enter)="openAssignmentFromCard(item, $event)"
+              (keydown.space)="openAssignmentFromCard(item, $event)"
+            >
+              <div class="announcement-head">
+                <div>
+                  <div class="post-type-badge" *ngIf="item.type !== 'announcement'" [class.assignment]="item.kind === 'assignment'" [class.material]="item.kind === 'material'">
+                    <span class="post-type-icon" aria-hidden="true">{{ item.kind === 'assignment' ? '📝' : '📘' }}</span>
+                    <span>{{ item.kind === 'assignment' ? 'Tema' : 'Material' }}</span>
+                  </div>
+                  <h3>{{ item.title }}</h3>
+                  <p>
+                    {{ formatShortDate(item.created_at) }}
+                    <span *ngIf="item.type === 'assignment' && item.kind === 'assignment' && item.due_at">| Deadline: {{ formatShortDate(item.due_at) }}</span>
+                  </p>
+                </div>
+                <div class="announcement-actions">
+                  <div *ngIf="role === 'professor'" class="item-menu">
+                    <button class="item-menu-button" aria-haspopup="true" [attr.aria-expanded]="itemMenuOpenForId === (item.type + '-' + item.id)" (click)="toggleItemMenu(item, $event)" title="Meniu">⋮</button>
+                    <div class="item-menu-list" *ngIf="itemMenuOpenForId === (item.type + '-' + item.id)" (click)="$event.stopPropagation()">
+                      <button class="item-menu-item" type="button" (click)="(item.type === 'announcement' ? startEditAnnouncement(item) : startEditAssignment(item)); toggleItemMenu(item, $event)">Editează</button>
+                      <button class="item-menu-item danger" type="button" (click)="(item.type === 'announcement' ? removeAnnouncement(item.id) : removeAssignment(item.id)); toggleItemMenu(item, $event)">Șterge</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <ng-container *ngIf="item.type === 'announcement'">
+                <div *ngIf="editingAnnouncementId === item.id; else showAnnouncement">
+                  <div class="form-field">
+                    <label>Titlu</label>
+                    <input [(ngModel)]="editingAnnouncementModel.title" />
+                  </div>
+                  <div class="form-field">
+                    <label>Conținut</label>
+                    <textarea [(ngModel)]="editingAnnouncementModel.content"></textarea>
+                  </div>
+                  <div class="edit-actions">
+                    <button class="btn-secondary" type="button" (click)="cancelEditAnnouncement()">Anulează</button>
+                    <button class="btn-primary" type="button" (click)="saveAnnouncement(item.id)">Salvează</button>
+                  </div>
+                </div>
+                <ng-template #showAnnouncement>
+                  <p class="announcement-content">{{ item.content }}</p>
+                </ng-template>
+
+                <p class="comments-summary" *ngIf="item.comments?.length > 0">{{ commentsSummaryText(item.comments.length) }}</p>
+
+                <div class="comments-list" *ngIf="item.comments?.length > 0">
+                  <article class="comment-item" *ngFor="let comment of item.comments">
+                    <div class="comment-head">
+                      <strong>{{ comment.authorName }}</strong>
+                      <span>{{ formatShortDate(comment.created_at) }}</span>
+                    </div>
+                    <p>{{ comment.content }}</p>
+                  </article>
+                </div> 
+
+                <div class="comment-toggle-row" *ngIf="role === 'student' && !showCommentFormByAnnouncement[item.id]">
+                  <button class="comment-compose-btn" type="button" (click)="toggleCommentForm(item.id)">Adauga comentariu</button>
+                </div>
+
+                <div class="comment-form" *ngIf="role === 'student' && showCommentFormByAnnouncement[item.id]">
+                  <div class="comment-input-wrap">
+                    <textarea [(ngModel)]="commentDraftByAnnouncement[item.id]" (input)="autoResizeTextarea($event)" placeholder="Scrie un comentariu la acest anunt..."></textarea>
+                  </div>
+                  <button class="comment-send-btn" type="button" (click)="addAnnouncementComment(item.id)" aria-label="Trimite comentariul"><img src="/send-icon.svg" alt="Trimite" /></button>
+                </div>
+              </ng-container>
+
+              <ng-container *ngIf="item.type === 'assignment'">
+                <div *ngIf="editingAssignmentId === item.id; else showAssignment">
+                  <div class="form-field">
+                    <label>Titlu</label>
+                    <input [(ngModel)]="editingAssignmentModel.title" />
+                  </div>
+                  <div class="form-field">
+                    <label>Conținut</label>
+                    <textarea [(ngModel)]="editingAssignmentModel.description"></textarea>
+                  </div>
+                  <div class="form-field" *ngIf="editingAssignmentModel.kind === 'assignment'">
+                    <label>Deadline (opțional)</label>
+                    <input type="date" [(ngModel)]="editingAssignmentModel.dueDate" />
+                  </div>
+                  <div class="edit-actions">
+                    <button class="btn-secondary" type="button" (click)="cancelEditAssignment()">Anulează</button>
+                    <button class="btn-primary" type="button" (click)="saveAssignment(item.id)">Salvează</button>
+                  </div>
+                </div>
+                <ng-template #showAssignment>
+                  <p class="announcement-content">{{ item.description }}</p>
+                </ng-template>
+              </ng-container>
+            </article>
+          </div>
+
+          <ng-template #emptyFeed>
+            <p class="muted-copy">Nu există postări încă.</p>
+          </ng-template>
+        </section>
+      </div>
+    </ng-container>
+  </div>
+</div>

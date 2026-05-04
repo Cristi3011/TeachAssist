@@ -1,20 +1,30 @@
 <nav class="navbar">
-  <a class="brand" [routerLink]="currentUser() ? (currentUser()?.role?.toLowerCase() === 'professor' ? ['/professor'] : ['/student']) : ['/']">{{ title() }}</a>
+  <a class="brand" [routerLink]="currentUser()?.role?.toLowerCase() === 'admin' ? ['/admin'] : (currentUser() ? ['/dashboard'] : ['/'])" >{{ title() }}</a>
   <div class="nav-container">
-    <!-- show Login/Register only when not logged in -->
     <ng-container *ngIf="!currentUser()">
-      <button class="nav-btn" [routerLink]="['/login']">Login</button>
-      <button class="nav-btn" [routerLink]="['/register']">Get started</button>
+      <button class="nav-btn" [routerLink]="['/login']">Conectează-te</button>
+      <button class="nav-btn" [routerLink]="['/register']">Înregistrează-te</button>
     </ng-container>
 
-    <!-- when logged in show username + logout -->
     <ng-container *ngIf="currentUser()">
       <div class="user-wrapper">
+        <button *ngIf="isAdmin()" class="nav-btn nav-btn--secondary" [routerLink]="['/admin']">Administrare</button>
         <span class="user-name">{{ currentUser()?.username }}</span>
-        <button class="nav-btn" (click)="logout()">Logout</button>
+        <button class="nav-btn" (click)="logout()">Ieși din cont</button>
       </div>
     </ng-container>
   </div>
 </nav>
+
+<section class="app-alerts" aria-live="polite" aria-atomic="true">
+  <article
+    *ngFor="let alert of alerts(); trackBy: trackAlert"
+    class="app-alert"
+    [ngClass]="'app-alert--' + alert.type"
+  >
+    <span class="app-alert__message">{{ alert.message }}</span>
+    <button class="app-alert__close" type="button" (click)="dismissAlert(alert.id)" aria-label="Inchide alerta">x</button>
+  </article>
+</section>
 
 <router-outlet></router-outlet>

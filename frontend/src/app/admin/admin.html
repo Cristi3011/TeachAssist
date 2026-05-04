@@ -1,0 +1,99 @@
+<section class="admin-page">
+  <div class="admin-shell" *ngIf="isAdmin; else deniedTpl">
+    <header class="admin-header">
+      <h1>Administrare platforma</h1>
+      <p>Bine ai venit, {{ username }}. De aici vei gestiona utilizatori, invitatii si cursuri.</p>
+    </header>
+
+    <div class="admin-grid">
+      <article class="admin-card">
+        <h2>Invitatii</h2>
+        <p class="invite-intro">Invita un profesor sau un student sa isi creeze cont pe platforma.</p>
+
+        <form class="invite-form" (ngSubmit)="addInvitation()">
+          <div class="invite-form-row">
+            <input
+              class="invite-input"
+              type="email"
+              name="inviteEmail"
+              placeholder="email@exemplu.com"
+              [(ngModel)]="inviteEmail"
+              required
+            />
+            <select class="invite-select" name="inviteRole" [(ngModel)]="inviteRole">
+              <option value="student">Student</option>
+              <option value="professor">Profesor</option>
+            </select>
+            <button class="invite-submit" type="submit" [disabled]="inviteSubmitting">
+              {{ inviteSubmitting ? 'Se trimite...' : 'Invita' }}
+            </button>
+          </div>
+        </form>
+
+        <p *ngIf="invitationActionError" class="users-state users-state--error">{{ invitationActionError }}</p>
+
+        <p *ngIf="loadingInvitations" class="users-state">Se incarca invitatiile...</p>
+        <p *ngIf="!loadingInvitations && invitationsLoadError" class="users-state users-state--error">{{ invitationsLoadError }}</p>
+
+        <ul *ngIf="!loadingInvitations && !invitationsLoadError" class="invites-list">
+          <li *ngFor="let invitation of invitations" class="invites-item">
+            <div>
+              <strong>{{ invitation.email }}</strong>
+              <div class="invites-meta">
+                <span class="role-chip">{{ invitation.role }}</span>
+                <span class="invite-status" [class.invite-status--used]="invitation.used">
+                  {{ invitation.used ? 'folosita' : 'activa' }}
+                </span>
+                <span *ngIf="invitation.created_at">{{ invitation.created_at | slice:0:10 }}</span>
+              </div>
+            </div>
+            <button class="invite-delete" (click)="removeInvitation(invitation.email)">Sterge</button>
+          </li>
+          <li *ngIf="invitations.length === 0" class="users-state">Nu exista invitatii momentan.</li>
+        </ul>
+      </article>
+      <article class="admin-card">
+        <h2>Utilizatori</h2>
+        <p class="users-intro">Listare utilizatori si rolurile lor in platforma.</p>
+
+        <p *ngIf="loadingUsers" class="users-state">Se incarca utilizatorii...</p>
+        <p *ngIf="!loadingUsers && usersError" class="users-state users-state--error">{{ usersError }}</p>
+
+        <ul *ngIf="!loadingUsers && !usersError" class="users-list">
+          <li *ngFor="let user of users" class="users-item">
+            <div>
+              <strong>{{ user.username }}</strong>
+              <div class="users-email">{{ user.email }}</div>
+            </div>
+            <span class="role-chip">{{ user.role || 'necunoscut' }}</span>
+          </li>
+        </ul>
+      </article>
+      <article class="admin-card">
+        <h2>Cursuri</h2>
+        <p class="courses-intro">Lista cursurilor existente, alaturi de profesorul titular.</p>
+
+        <p *ngIf="loadingCourses" class="users-state">Se incarca cursurile...</p>
+        <p *ngIf="!loadingCourses && coursesError" class="users-state users-state--error">{{ coursesError }}</p>
+
+        <ul *ngIf="!loadingCourses && !coursesError" class="courses-admin-list">
+          <li *ngFor="let course of courses" class="courses-admin-item">
+            <div>
+              <strong>{{ course.title }}</strong>
+              <div *ngIf="course.description" class="courses-admin-description">{{ course.description }}</div>
+              <div class="courses-admin-professor">Profesor: {{ course.professor || 'necunoscut' }}</div>
+            </div>
+          </li>
+          <li *ngIf="courses.length === 0" class="users-state">Nu exista cursuri momentan.</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+
+  <ng-template #deniedTpl>
+    <div class="denied-box">
+      <h2>Acces restrictionat</h2>
+      <p>Aceasta zona este disponibila doar pentru utilizatori cu rol admin.</p>
+    </div>
+  </ng-template>
+</section>

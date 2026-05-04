@@ -1,0 +1,128 @@
+<div class="page-center">
+  <div class="dashboard-card">
+
+    <!-- ══ PROFESSOR VIEW ══ -->
+    <ng-container *ngIf="role === 'professor'">
+      <div class="dash-header">
+        <h2>Dashboard</h2>
+        <p>Bun venit, {{ username }}. Gestionează cursurile tale.</p>
+        <span class="role-badge professor">Profesor</span>
+      </div>
+
+      <div class="section-header">
+        <h3 class="section-title">Adaugă un curs nou</h3>
+        <button class="btn-primary" (click)="toggleAddCourseForm()" [disabled]="loading">
+          {{ showAddCourseForm ? 'Închide' : 'Adaugă curs' }}
+        </button>
+      </div>
+
+      <div class="add-form" *ngIf="showAddCourseForm">
+        <div class="form-field">
+          <label>Titlu curs</label>
+          <input [(ngModel)]="courseTitle" placeholder="ex: Matematică avansată" />
+        </div>
+        <div class="form-field">
+          <label>Descriere</label>
+          <textarea [(ngModel)]="courseDescription" placeholder="Descriere opțională..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" (click)="cancelAddCourse()" [disabled]="loading">Renunță</button>
+          <button class="btn-primary" (click)="addCourse()" [disabled]="loading">Adaugă curs</button>
+        </div>
+      </div>
+
+      <hr class="divider" />
+      <h3 class="section-title">Cursurile mele</h3>
+
+      <div *ngIf="loading" class="status-loading">Se încarcă...</div>
+      <div *ngIf="error" class="status-error">{{ error }}</div>
+
+      <ul class="courses-list" *ngIf="!loading">
+        <li class="course-item" *ngFor="let c of coursesList" (click)="openCourse(c.id)" tabindex="0" (keydown.enter)="openCourse(c.id)">
+          <div class="course-info">
+            <div class="course-title">{{ c.title }}</div>
+            <p *ngIf="c.description" class="course-description">{{ c.description }}</p>
+            <div class="course-meta">
+              <span>{{ c.created_at | slice:0:10 }}</span>
+            </div>
+          </div>
+          <div class="course-actions">
+            <a class="btn-open" [routerLink]="['/dashboard/course', c.id]" (click)="$event.stopPropagation()">Deschide</a>
+          </div>
+        </li>
+        <li *ngIf="coursesList.length === 0" class="empty-state">
+          Nu ai adăugat niciun curs încă.
+        </li>
+      </ul>
+    </ng-container>
+
+    <!-- ══ STUDENT VIEW ══ -->
+    <ng-container *ngIf="role === 'student'">
+      <div class="dash-header">
+        <h2>Dashboard</h2>
+        <p>Bun venit, {{ username }}.</p>
+        <span class="role-badge student">Student</span>
+      </div>
+
+      <ng-container *ngIf="invitations.length > 0">
+        <div class="invitations-banner">
+          <div class="invitations-banner__title">
+            <span>Nou</span>
+            Invitații în așteptare ({{ invitations.length }})
+          </div>
+          <ul class="invitations-list">
+            <li class="invitation-item" *ngFor="let inv of invitations">
+              <div class="invitation-info">
+                <strong>{{ inv.title }}</strong>
+                <span *ngIf="inv.description" class="inv-desc">{{ inv.description }}</span>
+                <span class="inv-meta">Profesor: {{ inv.professor }}</span>
+              </div>
+              <div class="invitation-actions">
+                <button class="btn-accept" (click)="acceptInvitation(inv.id)">Acceptă</button>
+                <button class="btn-decline" (click)="declineInvitation(inv.id)">Refuză</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <hr class="divider" />
+      </ng-container>
+
+      <h3 class="section-title">Cursurile mele</h3>
+
+      <div *ngIf="loading" class="status-loading">Se încarcă cursurile...</div>
+      <div *ngIf="error" class="status-error">{{ error }}</div>
+
+      <ul class="courses-list" *ngIf="!loading">
+        <li class="course-item" *ngFor="let c of enrolledCourses" (click)="openCourse(c.courseId)" tabindex="0" (keydown.enter)="openCourse(c.courseId)">
+          <div class="course-info">
+            <div class="course-title">{{ c.title }}</div>
+            <p *ngIf="c.description" class="course-description">{{ c.description }}</p>
+            <div class="course-meta">
+              <span>Profesor: {{ c.professor }}</span>
+            </div>
+          </div>
+          <div class="course-actions">
+            <a class="btn-open" [routerLink]="['/dashboard/course', c.courseId]" (click)="$event.stopPropagation()">Deschide</a>
+          </div>
+        </li>
+        <li *ngIf="enrolledCourses.length === 0 && invitations.length === 0" class="empty-state">
+          Nu ești înscris la niciun curs momentan.<br />
+          <small>Așteaptă o invitație de la un profesor.</small>
+        </li>
+        <li *ngIf="enrolledCourses.length === 0 && invitations.length > 0" class="empty-state">
+          Acceptă o invitație pentru a te înscrie la un curs.
+        </li>
+      </ul>
+    </ng-container>
+
+    <ng-container *ngIf="!role">
+      <div class="not-logged">
+        <h2>Dashboard</h2>
+        <p>Trebuie să fii autentificat. <a [routerLink]="['/login']">Conectează-te</a></p>
+      </div>
+    </ng-container>
+
+   
+  </div>
+</div>

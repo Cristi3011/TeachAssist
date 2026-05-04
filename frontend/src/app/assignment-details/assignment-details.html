@@ -1,0 +1,117 @@
+<div class="assignment-page">
+  <div class="assignment-shell">
+    <div class="assignment-topbar">
+      <a class="back-link" [routerLink]="['/dashboard/course', courseId]">Inapoi la curs</a>
+    </div>
+
+    <div *ngIf="loading" class="status-box">Se incarca tema...</div>
+    <div *ngIf="error" class="status-box status-box--error">{{ error }}</div>
+
+    <ng-container *ngIf="!loading && assignment">
+      <section class="assignment-card">
+        <p class="eyebrow">{{ assignment.kind === 'material' ? 'Material' : 'Tema' }}</p>
+        <h1>{{ assignment.title }}</h1>
+        <p class="description">{{ assignment.description }}</p>
+
+        <div class="meta-row">
+          <span>Publicat: {{ formatShortDate(assignment.created_at) }}</span>
+          <span *ngIf="assignment.kind === 'assignment' && assignment.due_at">
+            Termen limită: {{ formatDeadline(assignment.due_at) }}
+            <span *ngIf="isPastDeadline" class="status-box--error" style="margin-left:8px; padding:2px 6px; border-radius:6px; font-size:12px;">Expirat</span>
+          </span>
+        </div>
+      </section>
+
+      <section class="panel" *ngIf="assignment.kind === 'assignment' && role === 'student'">
+        <h2>Tema ta</h2>
+        <div class="submit-row">
+          <input
+            id="assignmentFile"
+            type="file"
+            class="file-input file-input--hidden"
+            accept=".pdf,.doc,.docx,.txt,.zip,.ppt,.pptx"
+            (change)="onFileSelected($event)"
+          />
+          <label for="assignmentFile" class="file-input-label">{{ selectedFile ? selectedFile.name : 'Adaugă fișier' }}</label>
+          <button class="btn-primary" type="button" (click)="submitFile()" [disabled]="submitInProgress || isPastDeadline">
+            {{ submitInProgress ? 'Se trimite...' : 'Trimite fisier' }}
+          </button>
+        </div>
+        <div *ngIf="isPastDeadline" style="margin-top:8px;">
+          <p class="status-box status-box--error" style="padding:8px; margin:0; display:inline-block;">Termenul a expirat , nu se mai pot trimite teme.</p>
+        </div>
+
+        <p class="muted-copy" *ngIf="selectedFile">Selectat: {{ selectedFile.name }}</p>
+        <p class="muted-copy submission-right" *ngIf="mySubmission">
+          Tema ta: {{ mySubmission.originalFileName }}
+          ({{ formatShortDate(mySubmission.created_at) }})
+          -
+          <a [href]="'http://localhost:3000/assignments/submissions/' + mySubmission.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+          &nbsp;·&nbsp;
+          <a [href]="'http://localhost:3000/assignments/submissions/' + mySubmission.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
+      </p>
+      </section>
+
+      <section class="panel" *ngIf="role === 'professor'">
+        <h2>Teme predate</h2>
+        <div *ngIf="submissions.length > 0; else noSubmissionsTpl">
+          <ul class="submissions-list">
+            <li *ngFor="let s of submissions; trackBy: trackById">
+              <div
+                class="submission-line"
+                (click)="selectedStudentForComment = s.studentEmail"
+                [class.selected]="selectedStudentForComment === s.studentEmail"
+              >
+                <div class="submission-left">
+                  <strong>{{ s.studentEmail }}</strong>
+                  <div class="muted-copy">{{ s.originalFileName }}</div>
+                </div>
+                <div class="submission-right">
+                  <div class="muted-copy">{{ formatShortDate(s.created_at) }}</div>
+                  <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+                  &nbsp;·&nbsp;
+                  <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <ng-template #noSubmissionsTpl>
+          <p class="muted-copy">Nu există predări pentru această temă.</p>
+        </ng-template>
+      </section>
+
+      <section class="panel">
+        <h2>Comentarii private</h2>
+
+        <div class="comments-list" *ngIf="displayedComments.length > 0; else noCommentsTpl">
+          <article class="comment-item" *ngFor="let c of displayedComments; trackBy: trackById">
+            <div class="comment-head">
+              <strong>{{ c.authorName }}</strong>
+              <span>{{ c.authorRole === 'student' ? 'student' : 'profesor' }}</span>
+              <span>{{ formatShortDate(c.created_at) }}</span>
+            </div>
+            <p>{{ c.content }}</p>
+          </article>
+        </div>
+
+        <ng-template #noCommentsTpl>
+          <p class="muted-copy">Nu exista comentarii private momentan.</p>
+        </ng-template>
+
+        <div class="comment-form">
+          <div class="comment-input-wrap">
+            <textarea
+              [(ngModel)]="commentDraft"
+              (input)="autoResizeTextarea($event)"
+              placeholder="Scrie un comentariu privat despre tema..."
+            ></textarea>
+          </div>
+          <button class="comment-send-btn" type="button" (click)="sendPrivateComment()" aria-label="Trimite comentariul" [disabled]="sendCommentInProgress">
+            <img src="/send-icon.svg" alt="Trimite" />
+          </button>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</div>
