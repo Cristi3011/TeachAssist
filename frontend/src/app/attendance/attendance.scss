@@ -1,0 +1,189 @@
+:host {
+  --primary: #3f51b5;
+  --primary-dark: #2c3e9f;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --muted: #6b7280;
+
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.attendance-page {
+  min-height: 100vh;
+  padding: 32px 16px;
+  background:
+    linear-gradient(
+      180deg,
+      #eef2ff 0%,
+      #f8fafc 40%,
+      #f7f8fb 100%
+    );
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attendance-shell {
+  width: 100%;
+  max-width: 480px;
+}
+
+.attendance-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.08);
+
+  animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.attendance-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.attendance-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+
+  background: linear-gradient(
+    135deg,
+    #4f46e5,
+    #6366f1
+  );
+
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow:
+    0 10px 25px rgba(79, 70, 229, 0.25);
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.attendance-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #111827;
+}
+
+.attendance-subtitle {
+  margin-top: 6px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.info-box {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #dbeafe;
+  background: #f8fbff;
+
+  margin-bottom: 24px;
+}
+
+.info-box label {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.user-email {
+  font-weight: 600;
+  color: #111827;
+  word-break: break-word;
+}
+
+.attendance-btn {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 14px;
+
+  background: var(--primary);
+  color: white;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.attendance-btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.attendance-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-box {
+  text-align: center;
+}
+
+.login-icon {
+  font-size: 42px;
+  margin-bottom: 14px;
+}
+
+.muted-copy {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 640px) {
+
+  .attendance-card {
+    padding: 24px;
+  }
+
+  .attendance-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .attendance-header h1 {
+    font-size: 24px;
+  }
+}

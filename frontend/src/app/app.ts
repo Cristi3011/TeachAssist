@@ -89,7 +89,7 @@ export class App {
     if (!email) return;
 
     try {
-      const res = await fetch('http://localhost:3000/users');
+      const res = await fetch('/api/users');
       if (!res.ok) return;
       const users = await res.json();
       const found = (users || []).find((u: any) => (u?.email || '').toString().trim().toLowerCase() === email);

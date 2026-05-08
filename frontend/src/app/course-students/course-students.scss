@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 :host {
   display: block;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
@@ -34,12 +38,17 @@
 
 .students-card h1 {
   margin: 0 0 6px;
-  font-size: 28px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
 }
 
 .muted-copy {
   color: #6b7280;
   margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .students-list {
@@ -57,11 +66,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  transition:
+  transform 0.15s ease,
+  box-shadow 0.2s ease,
+  border-color 0.2s ease;
 }
 
+.student-item:hover {
+  transform: translateY(-1px);
+  border-color: #c7d2fe;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
 .student-item span {
   color: #6b7280;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .status-box {
@@ -79,8 +97,35 @@
 }
 
 @media (max-width: 700px) {
+
+  .students-page {
+    padding: 18px 12px 32px;
+  }
+
+  .students-card {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .students-card h1 {
+    font-size: 22px;
+  }
+
+  .muted-copy {
+    font-size: 13px;
+  }
+
   .student-item {
     flex-direction: column;
     align-items: flex-start;
+    padding: 12px;
+  }
+
+  .student-item strong {
+    font-size: 14px;
+  }
+
+  .student-item span {
+    font-size: 13px;
   }
 }

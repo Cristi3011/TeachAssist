@@ -1,0 +1,55 @@
+<div class="attendance-page">
+  <div class="attendance-shell">
+
+    <div class="container">
+    <div class="card">
+
+      <div class="attendance-header">
+        <div class="attendance-icon">✓</div>
+
+        <div>
+          <p class="eyebrow">TeachAssist</p>
+          <h1>Marcaj prezență</h1>
+          <p class="attendance-subtitle">
+            Confirmă participarea la curs/laborator.
+          </p>
+        </div>
+      </div>
+
+      <div *ngIf="loggedIn; else notLogged">
+
+        <div class="info-box">
+          <label>Utilizator conectat</label>
+          <div class="user-email">{{ email }}</div>
+        </div>
+
+        <button
+          class="btn-primary attendance-btn"
+          (click)="submit()"
+          [disabled]="loading"
+        >
+          <span *ngIf="!loading">Confirmă prezența</span>
+          <span *ngIf="loading">Se procesează...</span>
+        </button>
+
+      </div>
+
+      <ng-template #notLogged>
+
+        <div class="login-box">
+          <div class="login-icon">🔒</div>
+
+          <p class="muted-copy">
+            Trebuie să te conectezi pentru a marca prezența.
+          </p>
+
+          <button class="btn-primary attendance-btn" (click)="goToLogin()">
+            Conectează-te
+          </button>
+        </div>
+
+      </ng-template>
+    </div>
+    </div>
+  </div>
+</div>

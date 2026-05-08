@@ -146,4 +146,14 @@ export class EnrollmentsService {
   async getByCourse(courseId: number): Promise<Enrollment[]> {
     return this.enrollRepo.find({ where: { course: { id: courseId } } as any });
   }
+
+  /** Find accepted enrollment for a student in a specific course (optional year/group match) */
+  async findAcceptedForCourse(studentEmail: string, courseId: number, year?: number, group?: string): Promise<Enrollment | null> {
+    const email = (studentEmail || '').toLowerCase().trim();
+    if (!email) return null;
+    const where: any = { studentEmail: email, course: { id: courseId }, status: 'accepted' };
+    if (typeof year !== 'undefined' && year !== null) where.year = year;
+    if (typeof group !== 'undefined' && group !== null) where.group = group;
+    return this.enrollRepo.findOne({ where } as any);
+  }
 }

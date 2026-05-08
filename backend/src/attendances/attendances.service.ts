@@ -18,22 +18,29 @@ export class AttendancesService {
     private enrollmentsService: EnrollmentsService,
   ) {}
 
-  async createSession(courseId: number, durationMinutes?: number, startsAt?: Date, createdByEmail?: string, maxUses?: number) {
+  async createSession(courseId: number, startTime?: Date, endTime?: Date, year?: number, group?: string) {
     const course = await this.coursesService.getById(courseId);
     if (!course) throw new NotFoundException('Course not found');
+    const session = this.sessionsRepo.create({ course, startTime, endTime, year, group, status: 'scheduled' });
+    return this.sessionsRepo.save(session);
+  }
 
+  async openSession(sessionId: number, durationMinutes?: number) {
+    const session = await this.sessionsRepo.findOne({ where: { id: sessionId } as any });
+    if (!session) throw new NotFoundException('Session not found');
     const token = randomBytes(16).toString('hex');
     const now = new Date();
-    const start = startsAt ? new Date(startsAt) : now;
-    const end = durationMinutes ? new Date(start.getTime() + durationMinutes * 60000) : undefined;
-
-    const session = this.sessionsRepo.create({ token, course, startsAt: start, endsAt: end, maxUses });
+    const end = durationMinutes ? new Date(now.getTime() + durationMinutes * 60000) : session.endTime;
+    session.qrToken = token;
+    session.status = 'active';
+    session.startTime = now;
+    session.endTime = end;
     return this.sessionsRepo.save(session);
   }
 
   async findByToken(token: string) {
     if (!token) return null;
-    return this.sessionsRepo.findOne({ where: { token } });
+    return this.sessionsRepo.findOne({ where: { qrToken: token } as any });
   }
 
   async markAttendance(token: string, studentEmail: string, metadata?: any) {
@@ -44,15 +51,13 @@ export class AttendancesService {
     if (!session) throw new NotFoundException('Invalid token');
 
     const now = new Date();
-    if (session.startsAt && now < new Date(session.startsAt)) throw new BadRequestException('Session not started yet');
-    if (session.endsAt && now > new Date(session.endsAt)) throw new BadRequestException('Session expired');
+    if (session.status !== 'active') throw new BadRequestException('Session not active');
+    if (session.startTime && now < new Date(session.startTime)) throw new BadRequestException('Session not started yet');
+    if (session.endTime && now > new Date(session.endTime)) throw new BadRequestException('Session expired');
 
-    // Verify student is enrolled in course
-    const enrolled = await this.enrollmentsService.getEnrolled(normalized);
-    const isEnrolled = enrolled.some((e: any) => e.course?.id === session.course.id);
-    if (!isEnrolled) throw new BadRequestException('Student not enrolled in course');
+    const enrollment = await this.enrollmentsService.findAcceptedForCourse(normalized, session.course.id, session.year, session.group);
+    if (!enrollment) throw new BadRequestException('Student not enrolled or not accepted for this course/group/year');
 
-    // Check existing record
     const existing = await this.recordsRepo.findOne({ where: { session: { id: session.id } as any, studentEmail: normalized } as any });
     if (existing) throw new ConflictException('Already marked');
 
@@ -61,6 +66,19 @@ export class AttendancesService {
   }
 
   async listSessionsForCourse(courseId: number) {
-    return this.sessionsRepo.find({ where: { course: { id: courseId } } as any, order: { created_at: 'DESC' } });
+    return this.sessionsRepo.find({ where: { course: { id: courseId } } as any, order: { startTime: 'DESC' } });
+  }
+
+  async getAttendeesForSession(sessionId: number) {
+    return this.recordsRepo.find({ where: { session: { id: sessionId } } as any, order: { created_at: 'ASC' } });
+  }
+
+  async getStudentHistory(studentEmail: string, courseId?: number) {
+    const email = (studentEmail || '').toLowerCase().trim();
+    if (!email) return [];
+    const qb = this.recordsRepo.createQueryBuilder('r').leftJoinAndSelect('r.session', 's').leftJoin('s.course', 'c').where('r.studentEmail = :email', { email });
+    if (courseId) qb.andWhere('c.id = :courseId', { courseId });
+    qb.orderBy('r.created_at', 'DESC');
+    return qb.getMany();
   }
 }

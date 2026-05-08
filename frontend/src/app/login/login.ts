@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AlertService } from '../shared/alert.service';
 
@@ -13,18 +13,24 @@ import { AlertService } from '../shared/alert.service';
 })
 export class Login {
   model = { email: '', password: '' };
+  private returnUrl: string | null = null;
 
   private defaultRouteForRole(role?: string): string {
     return (role || '').toLowerCase() === 'admin' ? '/admin' : '/dashboard';
   }
 
-  constructor(private router: Router, private alerts: AlertService) {
+  constructor(private router: Router, private route: ActivatedRoute, private alerts: AlertService) {
     try {
       const raw = localStorage.getItem('teachassist_user');
       if (raw) {
         const user = JSON.parse(raw);
         this.router.navigate([this.defaultRouteForRole(user?.role)]);
+        return;
       }
+    } catch {}
+    try {
+      const raw = this.route.snapshot.queryParamMap.get('returnUrl');
+      this.returnUrl = raw ? decodeURIComponent(raw) : null;
     } catch {}
   }
 
@@ -35,7 +41,7 @@ export class Login {
 
   async submit() {
     try {
-      const res = await fetch('http://localhost:3000/users/login', {
+      const res = await fetch('/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.model),
@@ -51,15 +57,17 @@ export class Login {
         return;
       }
       console.log('Login success', { username: data.user?.username, role: data.user?.role });
-      // persist user locally and notify app
       try {
-        // persist only the safe user fields
         const safe = { username: data.user?.username, email: data.user?.email, role: data.user?.role };
         localStorage.setItem('teachassist_user', JSON.stringify(safe));
         window.dispatchEvent(new CustomEvent('auth:login', { detail: safe }));
       } catch {}
 
-      this.router.navigate([this.defaultRouteForRole(data.user?.role)]);
+      if (this.returnUrl) {
+        this.router.navigateByUrl(this.returnUrl);
+      } else {
+        this.router.navigate([this.defaultRouteForRole(data.user?.role)]);
+      }
       
     } catch (err) {
       console.error(err);

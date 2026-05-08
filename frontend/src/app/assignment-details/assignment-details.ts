@@ -90,7 +90,7 @@ export class AssignmentDetails {
   }
 
   async loadAllSubmissions() {
-    const res = await fetch(`http://localhost:3000/assignments/${this.assignmentId}/submissions`);
+    const res = await fetch(`/api/assignments/${this.assignmentId}/submissions`);
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) throw new Error((data && data.message) || 'Nu se pot incarca predarile');
@@ -101,7 +101,7 @@ export class AssignmentDetails {
   }
 
   async loadAllComments() {
-    const res = await fetch(`http://localhost:3000/assignments/${this.assignmentId}/comments/all`);
+    const res = await fetch(`/api/assignments/${this.assignmentId}/comments/all`);
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) throw new Error((data && data.message) || 'Nu se pot incarca comentariile');
@@ -114,7 +114,7 @@ export class AssignmentDetails {
   }
 
   async loadAssignment() {
-    const res = await fetch(`http://localhost:3000/assignments/${this.assignmentId}`);
+    const res = await fetch(`/api/assignments/${this.assignmentId}`);
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (!res.ok || !data?.id) throw new Error((data && data.message) || 'Tema nu a fost gasita');
@@ -124,7 +124,7 @@ export class AssignmentDetails {
   async loadMySubmission() {
     if (!this.userEmail) return;
     const res = await fetch(
-      `http://localhost:3000/assignments/${this.assignmentId}/submissions/mine?studentEmail=${encodeURIComponent(this.userEmail)}`,
+      `/api/assignments/${this.assignmentId}/submissions/mine?studentEmail=${encodeURIComponent(this.userEmail)}`,
     );
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
@@ -135,7 +135,7 @@ export class AssignmentDetails {
   async loadComments() {
     if (!this.userEmail) return;
     const res = await fetch(
-      `http://localhost:3000/assignments/${this.assignmentId}/comments?studentEmail=${encodeURIComponent(this.userEmail)}`,
+      `/api/assignments/${this.assignmentId}/comments?studentEmail=${encodeURIComponent(this.userEmail)}`,
     );
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
@@ -168,7 +168,7 @@ export class AssignmentDetails {
       form.append('studentEmail', this.userEmail);
       form.append('file', this.selectedFile);
 
-      const res = await fetch(`http://localhost:3000/assignments/${this.assignmentId}/submissions`, {
+      const res = await fetch(`/api/assignments/${this.assignmentId}/submissions`, {
         method: 'POST',
         body: form,
       });
@@ -205,7 +205,7 @@ export class AssignmentDetails {
         throw new Error('Selectează mai întâi un student pentru comentariu');
       }
 
-      const res = await fetch(`http://localhost:3000/assignments/${this.assignmentId}/comments`, {
+      const res = await fetch(`/api/assignments/${this.assignmentId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

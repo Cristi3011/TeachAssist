@@ -76,7 +76,7 @@ export class Admin {
     this.usersError = '';
 
     try {
-      const data = await firstValueFrom(this.http.get<any[]>('http://localhost:3000/users'));
+      const data = await firstValueFrom(this.http.get<any[]>('/api/users'));
       const users = Array.isArray(data) ? data : [];
 
       this.users = users.map((u: any) => ({
@@ -98,7 +98,7 @@ export class Admin {
     this.coursesError = '';
 
     try {
-      const data = await firstValueFrom(this.http.get<any[]>('http://localhost:3000/courses'));
+      const data = await firstValueFrom(this.http.get<any[]>('/api/courses'));
       const courses = Array.isArray(data) ? data : [];
 
       this.courses = courses.map((c: any) => ({
@@ -129,7 +129,7 @@ export class Admin {
     this.invitationActionError = '';
 
     try {
-      const data = await firstValueFrom(this.http.post<any>('http://localhost:3000/invitations', { email, role: this.inviteRole }));
+      const data = await firstValueFrom(this.http.post<any>('/api/invitations', { email, role: this.inviteRole }));
 
       this.invitations.unshift({
         email,
@@ -160,7 +160,7 @@ export class Admin {
 
     this.invitationActionError = '';
     try {
-      await firstValueFrom(this.http.delete('http://localhost:3000/invitations', { body: { email } }));
+      await firstValueFrom(this.http.delete('/api/invitations', { body: { email } }));
 
       await this.loadInvitations();
       this.alerts.success('Invitatia a fost stearsa.');
@@ -176,7 +176,7 @@ export class Admin {
     this.invitationsLoadError = '';
 
     try {
-      const data = await firstValueFrom(this.http.get<any[]>('http://localhost:3000/invitations'));
+      const data = await firstValueFrom(this.http.get<any[]>('/api/invitations'));
       const list = Array.isArray(data) ? data : [];
 
       this.invitations = list.map((i: any) => ({

@@ -9,8 +9,8 @@ import { EnrollmentsModule } from '../enrollments/enrollments.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([AttendanceSession, AttendanceRecord]), CoursesModule, EnrollmentsModule],
-  providers: [AttendancesService],
-  controllers: [AttendancesController],
+  providers: [AttendancesService, ],
+  controllers: [AttendancesController, ],
   exports: [AttendancesService],
 })
 export class AttendancesModule {}

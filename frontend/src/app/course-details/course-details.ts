@@ -20,6 +20,12 @@ export class CourseDetails {
   attendanceDurationMinutes = 10;
   generatedAttendanceSession: any = null;
   attendanceQrImageUrl = '';
+  attendanceLink = '';
+  countdownText = '';
+  private attendanceCountdownInterval: any = null;
+  private regeneratingToken = false;
+  attendeesForSession: Array<{ studentEmail: string; created_at: string; metadata?: any }> = [];
+  private attendancePollInterval: any = null;
   userEmail = '';
   userName = '';
   loading = false;
@@ -112,26 +118,150 @@ export class CourseDetails {
 
   closeAttendanceModal() {
     this.showAttendanceModal = false;
+    if (this.attendanceCountdownInterval) {
+      clearInterval(this.attendanceCountdownInterval);
+      this.attendanceCountdownInterval = null;
+    }
+    if (this.attendancePollInterval) {
+      clearInterval(this.attendancePollInterval);
+      this.attendancePollInterval = null;
+    }
     this.cdr.markForCheck();
   }
 
   async createAttendanceSession() {
     if (!this.courseId) return;
     try {
-      const res = await fetch(`http://localhost:3000/courses/${this.courseId}/attendance/sessions`, {
+      // create a session, then immediately open it to get a QR token
+      const res = await fetch(`/api/courses/${this.courseId}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Nu se poate crea sesiunea de prezență');
+      const created = data.session;
+
+      const openRes = await fetch(`/api/sessions/${created.id}/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ durationMinutes: Number(this.attendanceDurationMinutes) || 10 }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Nu se poate crea sesiunea de prezență');
-      this.generatedAttendanceSession = data.session || data.session;
-      const token = this.generatedAttendanceSession?.token;
-      const attendanceUrl = `${location.protocol}//${location.host}/attendance/mark?token=${encodeURIComponent(token)}`;
+      const openData = await openRes.json();
+      if (!openRes.ok) throw new Error(openData?.message || 'Nu se poate deschide sesiunea de prezență');
+
+      this.generatedAttendanceSession = { ...created, qrToken: openData.token, endTime: openData.expiresAt };
+      let endsAt = new Date(this.generatedAttendanceSession.endTime).getTime();
+
+      if (this.attendanceCountdownInterval) {
+        clearInterval(this.attendanceCountdownInterval);
+      }
+
+      const updateCountdown = () => {
+        const now = Date.now();
+        const diff = endsAt - now;
+
+        if (diff <= 0) {
+          // attempt to regenerate a new token automatically while modal is open
+          if (!this.regeneratingToken) {
+            this.regeneratingToken = true;
+            this.countdownText = 'Regenerare cod...';
+            this.cdr.markForCheck();
+            this.regenerateSessionToken(created.id).then((newEnds) => {
+              if (newEnds) {
+                endsAt = newEnds;
+              }
+            }).catch(() => {}).finally(() => {
+              this.regeneratingToken = false;
+            });
+          }
+          return;
+        }
+
+        const minutes = Math.floor(diff / 1000 / 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        this.countdownText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        this.cdr.markForCheck();
+      };
+
+      updateCountdown();
+
+      this.attendanceCountdownInterval = setInterval(updateCountdown, 1000);
+      const token = this.generatedAttendanceSession?.qrToken;
+      let hostToUse = location.hostname;
+      const unreachablePrefix = '192.168.56.';
+      if (hostToUse.startsWith(unreachablePrefix) || hostToUse === 'localhost' || hostToUse === '127.0.0.1') {
+        try {
+          const hint = hostToUse.startsWith(unreachablePrefix) ? '' : hostToUse;
+          const answer = window.prompt('Introdu IP-ul vizibil pe rețea (ex: 192.168.1.132) pentru link-ul QR (lasă gol pentru a folosi ' + hostToUse + '):', hint || '');
+          if (answer && answer.trim()) hostToUse = answer.trim();
+        } catch {}
+      }
+      const portPart = location.port ? `:${location.port}` : '';
+      const attendanceUrl = `${location.protocol}//${hostToUse}${portPart}/attendance/mark?token=${encodeURIComponent(token)}`;
+      this.attendanceLink = attendanceUrl;
       this.attendanceQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendanceUrl)}`;
       this.cdr.markForCheck();
+
+      // load attendees immediately and poll while session active
+      if (created?.id) {
+        this.loadAttendees(created.id);
+        if (this.attendancePollInterval) clearInterval(this.attendancePollInterval);
+        this.attendancePollInterval = setInterval(() => this.loadAttendees(created.id), 5000);
+      }
     } catch (err: any) {
       this.alerts.error(err?.message || 'Network error');
+    }
+  }
+
+  private async regenerateSessionToken(sessionId: number): Promise<number | null> {
+    try {
+      const openRes = await fetch(`/api/sessions/${sessionId}/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ durationMinutes: Number(this.attendanceDurationMinutes) || 10 }),
+      });
+      const openData = await openRes.json();
+      if (!openRes.ok) throw new Error(openData?.message || 'Nu se poate regenera codul');
+
+      // update token and endTime
+      this.generatedAttendanceSession = { ...this.generatedAttendanceSession, qrToken: openData.token, endTime: openData.expiresAt };
+      const token = this.generatedAttendanceSession?.qrToken;
+      let hostToUse = location.hostname;
+      const unreachablePrefix = '192.168.56.';
+      if (hostToUse.startsWith(unreachablePrefix) || hostToUse === 'localhost' || hostToUse === '127.0.0.1') {
+        try {
+          const hint = hostToUse.startsWith(unreachablePrefix) ? '' : hostToUse;
+          const answer = window.prompt('Introdu IP-ul vizibil pe rețea (ex: 192.168.1.132) pentru link-ul QR (lasă gol pentru a folosi ' + hostToUse + '):', hint || '');
+          if (answer && answer.trim()) hostToUse = answer.trim();
+        } catch {}
+      }
+      const portPart = location.port ? `:${location.port}` : '';
+      const attendanceUrl = `${location.protocol}//${hostToUse}${portPart}/attendance/mark?token=${encodeURIComponent(token)}`;
+      this.attendanceLink = attendanceUrl;
+      this.attendanceQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendanceUrl)}`;
+
+      // return new end timestamp in ms
+      return new Date(openData.expiresAt).getTime();
+    } catch (err: any) {
+      console.warn('Failed to regenerate token', err?.message || err);
+      this.countdownText = 'Eroare la regenerare';
+      this.cdr.markForCheck();
+      return null;
+    }
+  }
+
+  async loadAttendees(sessionId: number) {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/attendance`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Nu se pot prelua prezențele');
+      this.attendeesForSession = Array.isArray(data) ? data : [];
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      console.warn('Could not load attendees', err?.message || err);
     }
   }
 
@@ -165,7 +295,7 @@ export class CourseDetails {
     if (!confirm('Stergi acest curs?')) return;
     this.loading = true;
     try {
-      const res = await fetch(`http://localhost:3000/courses/${this.courseId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/courses/${this.courseId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Nu se poate sterge cursul');
       this.alerts.success('Curs sters');
@@ -213,7 +343,7 @@ export class CourseDetails {
   }
 
   async loadCourse() {
-    const res = await fetch(`http://localhost:3000/courses/${this.courseId}`);
+    const res = await fetch(`/api/courses/${this.courseId}`);
     const data = await res.json();
     if (!res.ok || !data?.id) throw new Error(data.message || 'Cursul nu a fost găsit');
     this.course = data;
@@ -224,14 +354,14 @@ export class CourseDetails {
   }
 
   async loadAnnouncements() {
-    const res = await fetch(`http://localhost:3000/announcements?courseId=${this.courseId}`);
+    const res = await fetch(`/api/announcements?courseId=${this.courseId}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Nu se pot încărca anunțurile');
     this.announcements = data;
   }
 
   async loadAssignments() {
-    const res = await fetch(`http://localhost:3000/assignments?courseId=${this.courseId}`);
+    const res = await fetch(`/api/assignments?courseId=${this.courseId}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Nu se pot incarca temele');
     this.assignments = Array.isArray(data) ? data : [];
@@ -239,7 +369,7 @@ export class CourseDetails {
 
   async saveCourse() {
     try {
-      const res = await fetch(`http://localhost:3000/courses/${this.courseId}`, {
+      const res = await fetch(`/api/courses/${this.courseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(this.editModel),
@@ -261,7 +391,7 @@ export class CourseDetails {
       return;
     }
     try {
-      const res = await fetch('http://localhost:3000/enrollments/invite', {
+      const res = await fetch('/api/enrollments/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentEmail: email, courseId: this.courseId }),
@@ -329,7 +459,7 @@ export class CourseDetails {
     this.csvInviteReport = null;
 
     try {
-      const res = await fetch('http://localhost:3000/enrollments/invite/bulk', {
+      const res = await fetch('/api/enrollments/invite/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentEmails: this.parsedCsvEmails, courseId: this.courseId }),
@@ -367,7 +497,7 @@ export class CourseDetails {
       return;
     }
     try {
-      const res = await fetch('http://localhost:3000/announcements', {
+      const res = await fetch('/api/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ courseId: this.courseId, title, content }),
@@ -401,7 +531,7 @@ export class CourseDetails {
     }
 
     try {
-      const res = await fetch('http://localhost:3000/assignments', {
+      const res = await fetch('/api/assignments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -426,7 +556,7 @@ export class CourseDetails {
   async removeAssignment(id: number) {
     if (!confirm('Stergi aceasta tema?')) return;
     try {
-      const res = await fetch(`http://localhost:3000/assignments/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/assignments/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data.removed) throw new Error(data.message || 'Nu se poate sterge tema');
       await this.loadAssignments();
@@ -462,7 +592,7 @@ export class CourseDetails {
     const kind = this.editingAssignmentModel.kind;
     if (!title || !description) { this.alerts.warning('Completează titlul și conținutul'); return; }
     try {
-      const res = await fetch(`http://localhost:3000/assignments/${id}`, {
+      const res = await fetch(`/api/assignments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description, dueDate: kind === 'assignment' ? (dueDate || null) : null, kind }),
@@ -494,7 +624,7 @@ export class CourseDetails {
   async removeAnnouncement(id: number) {
     if (!confirm('Ștergi acest anunț?')) return;
     try {
-      const res = await fetch(`http://localhost:3000/announcements/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data.removed) throw new Error(data.message || 'Nu se poate șterge anunțul');
       await this.loadAnnouncements();
@@ -522,7 +652,7 @@ export class CourseDetails {
     const content = (this.editingAnnouncementModel.content || '').trim();
     if (!title || !content) { this.alerts.warning('Completează titlul și conținutul'); return; }
     try {
-      const res = await fetch(`http://localhost:3000/announcements/${id}`, {
+      const res = await fetch(`/api/announcements/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, content }),
@@ -554,7 +684,7 @@ export class CourseDetails {
     }
 
     try {
-      const res = await fetch(`http://localhost:3000/announcements/${announcementId}/comments`, {
+      const res = await fetch(`/api/announcements/${announcementId}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ authorName: this.userName, content }),

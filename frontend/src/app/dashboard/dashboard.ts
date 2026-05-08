@@ -92,7 +92,7 @@ export class Dashboard {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(
-        `http://localhost:3000/courses/by?professorEmail=${encodeURIComponent(email)}`,
+        `/api/courses/by?professorEmail=${encodeURIComponent(email)}`,
         { signal: controller.signal },
       );
       clearTimeout(timeout);
@@ -123,7 +123,7 @@ export class Dashboard {
     }
     this.loading = true;
     try {
-      const res = await fetch('http://localhost:3000/courses', {
+      const res = await fetch('/api/courses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description, professorEmail: email }),
@@ -161,7 +161,7 @@ export class Dashboard {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(
-        `http://localhost:3000/enrollments/invitations?email=${encodeURIComponent(email)}`,
+        `/api/enrollments/invitations?email=${encodeURIComponent(email)}`,
         { signal: controller.signal },
       );
       clearTimeout(timeout);
@@ -183,7 +183,7 @@ export class Dashboard {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(
-        `http://localhost:3000/enrollments/enrolled?email=${encodeURIComponent(email)}`,
+        `/api/enrollments/enrolled?email=${encodeURIComponent(email)}`,
         { signal: controller.signal },
       );
       clearTimeout(timeout);
@@ -204,7 +204,7 @@ export class Dashboard {
     const email = this.getUserEmail();
     if (!email) return;
     try {
-      const res = await fetch(`http://localhost:3000/enrollments/${id}/accept`, {
+      const res = await fetch(`/api/enrollments/${id}/accept`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentEmail: email }),
@@ -220,7 +220,7 @@ export class Dashboard {
     const email = this.getUserEmail();
     if (!email) return;
     try {
-      const res = await fetch(`http://localhost:3000/enrollments/${id}/decline`, {
+      const res = await fetch(`/api/enrollments/${id}/decline`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ studentEmail: email }),

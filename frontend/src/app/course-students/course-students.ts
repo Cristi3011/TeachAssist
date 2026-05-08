@@ -48,14 +48,14 @@ export class CourseStudents {
   }
 
   private async loadCourse() {
-    const res = await fetch(`http://localhost:3000/courses/${this.courseId}`);
+    const res = await fetch(`/api/courses/${this.courseId}`);
     const data = await res.json();
     if (!res.ok || !data?.id) throw new Error(data?.message || 'Cursul nu a fost gasit');
     this.courseTitle = (data?.title || '').toString();
   }
 
   private async loadAcceptedStudents() {
-    const res = await fetch(`http://localhost:3000/enrollments/course?courseId=${this.courseId}`);
+    const res = await fetch(`/api/enrollments/course?courseId=${this.courseId}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data?.message || 'Nu am putut incarca studentii');
 

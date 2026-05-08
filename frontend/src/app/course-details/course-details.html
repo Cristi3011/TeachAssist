@@ -34,31 +34,113 @@
 
       <div class="course-grid">
 
-        <div class="modal-backdrop" *ngIf="showAttendanceModal">
-          <div class="modal">
-            <h3>Generează cod QR pentru prezență</h3>
-            <div *ngIf="!generatedAttendanceSession">
-              <div class="form-field">
-                <label>Durata sesiune (minute)</label>
-                <input type="number" [(ngModel)]="attendanceDurationMinutes" />
-              </div>
-              <div class="modal-actions">
-                <button class="btn-primary" (click)="createAttendanceSession()">Generează</button>
-                <button class="btn-secondary" (click)="closeAttendanceModal()">Anulează</button>
-              </div>
+        <div class="attendance-overlay" *ngIf="showAttendanceModal">
+
+  <div class="attendance-modal">
+
+    <button
+      class="attendance-close"
+      (click)="closeAttendanceModal()"
+      aria-label="Închide"
+    >
+      ✕
+    </button>
+
+    <div class="attendance-modal-header">
+
+      <div>
+        <p class="eyebrow">TeachAssist</p>
+
+        <h2>Prezență curs</h2>
+
+        <p class="attendance-subtitle">
+          Studenții pot scana codul QR pentru confirmarea prezenței.
+        </p>
+      </div>
+
+    </div>
+
+    <div *ngIf="!generatedAttendanceSession">
+
+      <div class="form-field">
+        <label>Durata sesiunii (minute)</label>
+
+        <input
+          type="number"
+          [(ngModel)]="attendanceDurationMinutes"
+          min="1"
+        />
+      </div>
+
+      <div class="modal-actions">
+
+        <button
+          class="btn-primary qr-generate-btn"
+          (click)="createAttendanceSession()"
+        >
+          Generează cod QR
+        </button>
+
+        <button
+          class="btn-secondary"
+          (click)="closeAttendanceModal()"
+        >
+          Anulează
+        </button>
+
+      </div>
+
+    </div>
+
+    <div *ngIf="generatedAttendanceSession" class="qr-session">
+
+      <div class="attendance-session-meta">
+
+      <div class="qr-countdown">
+        <span class="countdown-label">Expiră în </span>
+        <span class="countdown-time">{{ countdownText }}</span>
+      </div>
             </div>
-            <div *ngIf="generatedAttendanceSession">
-              <p>Sesiune creată: <strong>{{ generatedAttendanceSession.id }}</strong></p>
-              <p>Expiră: {{ formatShortDate(generatedAttendanceSession.endsAt) }}</p>
-              <div class="qr-wrap">
-                <img [src]="attendanceQrImageUrl" alt="QR cod prezență" />
-              </div>
-              <div class="modal-actions">
-                <button class="btn-primary" (click)="closeAttendanceModal()">Închide</button>
-              </div>
-            </div>
-          </div>
-        </div>
+
+      <div class="qr-container">
+
+        <div class="qr-glow"></div>
+
+        <img
+          [src]="attendanceQrImageUrl"
+          alt="QR cod prezență"
+          class="qr-image"
+        />
+
+      </div>
+
+      <p class="qr-caption">
+        Scanează codul folosind TeachAssist pentru a marca prezența.
+      </p>
+
+      <div *ngIf="role === 'professor'" class="attendees-list">
+        <h3>Participanți ({{ attendeesForSession.length }})</h3>
+        <ul>
+          <li *ngFor="let a of attendeesForSession">{{ a.studentEmail }} <span class="muted-copy">— {{ formatShortDate(a.created_at) }} </span></li>
+        </ul>
+      </div>
+
+      <div class="modal-actions">
+
+        <button
+          class="btn-primary"
+          (click)="closeAttendanceModal()"
+        >
+          Închide
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
 
         <section class="panel" *ngIf="role === 'professor' && canEditCourse">
           <h2>Setări curs</h2>
