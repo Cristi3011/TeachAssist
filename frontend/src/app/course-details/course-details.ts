@@ -16,6 +16,10 @@ export class CourseDetails {
   role: 'professor' | 'student' | null = null;
   canEditCourse = false;
   showCourseMenu = false;
+  showAttendanceModal = false;
+  attendanceDurationMinutes = 10;
+  generatedAttendanceSession: any = null;
+  attendanceQrImageUrl = '';
   userEmail = '';
   userName = '';
   loading = false;
@@ -93,6 +97,42 @@ export class CourseDetails {
   toggleCourseMenu() {
     if (this.role !== 'professor') return;
     this.showCourseMenu = !this.showCourseMenu;
+  }
+
+  async generateAttendanceNow() {
+    if (this.role !== 'professor') return;
+    this.showCourseMenu = false;
+    this.showAttendanceModal = true;
+    this.generatedAttendanceSession = null;
+    this.attendanceQrImageUrl = '';
+    this.attendanceDurationMinutes = 5;
+    this.cdr.markForCheck();
+    await this.createAttendanceSession();
+  }
+
+  closeAttendanceModal() {
+    this.showAttendanceModal = false;
+    this.cdr.markForCheck();
+  }
+
+  async createAttendanceSession() {
+    if (!this.courseId) return;
+    try {
+      const res = await fetch(`http://localhost:3000/courses/${this.courseId}/attendance/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ durationMinutes: Number(this.attendanceDurationMinutes) || 10 }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Nu se poate crea sesiunea de prezență');
+      this.generatedAttendanceSession = data.session || data.session;
+      const token = this.generatedAttendanceSession?.token;
+      const attendanceUrl = `${location.protocol}//${location.host}/attendance/mark?token=${encodeURIComponent(token)}`;
+      this.attendanceQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendanceUrl)}`;
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      this.alerts.error(err?.message || 'Network error');
+    }
   }
 
   openEditMode() {

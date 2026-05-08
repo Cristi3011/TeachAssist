@@ -18,7 +18,7 @@ export class EnrollmentsService {
   ) {}
 
   /** Professor invites a student to a course */
-  async invite(studentEmail: string, courseId: number) {
+  async invite(studentEmail: string, courseId: number, year?: number, group?: string): Promise<Enrollment> {
     const email = (studentEmail || '').toLowerCase().trim();
     if (!email) throw new BadRequestException('Student email required');
 
@@ -35,18 +35,21 @@ export class EnrollmentsService {
       if (existing.status === 'pending') {
         throw new ConflictException('Student already invited');
       }
-
-      // If a previous invitation was declined, allow re-inviting by resetting to pending.
       existing.status = 'pending';
       return this.enrollRepo.save(existing);
     }
 
-    const enrollment = this.enrollRepo.create({ studentEmail: email, course, status: 'pending' });
+    const enrollment = new Enrollment();
+    enrollment.studentEmail = email;
+    enrollment.course = course;
+    enrollment.status = 'pending';
+    enrollment.year = typeof year !== 'undefined' && year !== null ? year : undefined;
+    enrollment.group = typeof group !== 'undefined' && group !== null ? group : undefined;
     return this.enrollRepo.save(enrollment);
   }
 
   /** Professor invites multiple students to a course */
-  async inviteBulk(studentEmails: string[], courseId: number) {
+  async inviteBulk(studentEmails: string[], courseId: number): Promise<any> {
     if (!Array.isArray(studentEmails) || studentEmails.length === 0) {
       throw new BadRequestException('At least one student email is required');
     }
@@ -105,18 +108,18 @@ export class EnrollmentsService {
     return { summary, results };
   }
 
-  /** Student accepts a pending invitation */
-  async accept(id: number, studentEmail: string) {
+  async accept(id: number, studentEmail: string, year?: number, group?: string): Promise<Enrollment> {
     const email = (studentEmail || '').toLowerCase().trim();
     const found = await this.enrollRepo.findOne({ where: { id } });
     if (!found) throw new NotFoundException('Invitation not found');
     if (found.studentEmail !== email) throw new BadRequestException('Not your invitation');
     found.status = 'accepted';
+    if (typeof year !== 'undefined') found.year = year;
+    if (typeof group !== 'undefined') found.group = group;
     return this.enrollRepo.save(found);
   }
 
-  /** Student declines a pending invitation */
-  async decline(id: number, studentEmail: string) {
+  async decline(id: number, studentEmail: string): Promise<Enrollment> {
     const email = (studentEmail || '').toLowerCase().trim();
     const found = await this.enrollRepo.findOne({ where: { id } });
     if (!found) throw new NotFoundException('Invitation not found');
@@ -126,21 +129,21 @@ export class EnrollmentsService {
   }
 
   /** Get accepted enrollments for a student */
-  async getEnrolled(studentEmail: string) {
+  async getEnrolled(studentEmail: string): Promise<Enrollment[]> {
     const email = (studentEmail || '').toLowerCase().trim();
     if (!email) return [];
     return this.enrollRepo.find({ where: { studentEmail: email, status: 'accepted' } });
   }
 
   /** Get pending invitations for a student */
-  async getPending(studentEmail: string) {
+  async getPending(studentEmail: string): Promise<Enrollment[]> {
     const email = (studentEmail || '').toLowerCase().trim();
     if (!email) return [];
     return this.enrollRepo.find({ where: { studentEmail: email, status: 'pending' } });
   }
 
   /** Get all enrollments for a course (for professor view) */
-  async getByCourse(courseId: number) {
+  async getByCourse(courseId: number): Promise<Enrollment[]> {
     return this.enrollRepo.find({ where: { course: { id: courseId } } as any });
   }
 }

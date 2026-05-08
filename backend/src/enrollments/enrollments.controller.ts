@@ -7,11 +7,11 @@ export class EnrollmentsController {
 
   /** POST /enrollments/invite — professor invites a student */
   @Post('invite')
-  async invite(@Body() body: { studentEmail: string; courseId: number }) {
-    const saved = await this.enrollments.invite(body.studentEmail, body.courseId);
+  async invite(@Body() body: { studentEmail: string; courseId: number; year?: number; group?: string }) {
+    const saved = await this.enrollments.invite(body.studentEmail, body.courseId, body.year, body.group);
     return {
       message: 'Invitation sent',
-      enrollment: { id: saved.id, studentEmail: saved.studentEmail, courseId: saved.course?.id, status: saved.status },
+      enrollment: { id: saved.id, studentEmail: saved.studentEmail, courseId: saved.course?.id, status: saved.status, year: saved.year, group: saved.group },
     };
   }
 
@@ -32,6 +32,8 @@ export class EnrollmentsController {
       description: (e.course as any)?.description,
       professor: (e.course as any)?.professor?.username || (e.course as any)?.professor?.email,
       created_at: e.course?.created_at,
+      year: (e as any).year,
+      group: (e as any).group,
     }));
   }
 
@@ -46,20 +48,20 @@ export class EnrollmentsController {
       description: (e.course as any)?.description,
       professor: (e.course as any)?.professor?.username || (e.course as any)?.professor?.email,
       enrollmentCreatedAt: e.created_at,
+      year: (e as any).year,
+      group: (e as any).group,
     }));
   }
 
-  /** GET /enrollments/course?courseId= — enrollments for a course (professor) */
   @Get('course')
   async byCourse(@Query('courseId') courseId?: string) {
     const list = await this.enrollments.getByCourse(Number(courseId));
-    return list.map((e) => ({ id: e.id, studentEmail: e.studentEmail, status: e.status, created_at: e.created_at }));
+    return list.map((e) => ({ id: e.id, studentEmail: e.studentEmail, status: e.status, created_at: e.created_at, year: (e as any).year, group: (e as any).group }));
   }
 
-  /** PATCH /enrollments/:id/accept */
   @Patch(':id/accept')
-  async accept(@Param('id') id: string, @Body() body: { studentEmail: string }) {
-    const updated = await this.enrollments.accept(Number(id), body.studentEmail);
+  async accept(@Param('id') id: string, @Body() body: { studentEmail: string; year?: number; group?: string }) {
+    const updated = await this.enrollments.accept(Number(id), body.studentEmail, body.year, body.group);
     return { message: 'Accepted', status: updated.status };
   }
 

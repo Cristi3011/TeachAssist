@@ -9,6 +9,12 @@ export class Enrollment {
   @Column({ length: 100 })
   studentEmail: string;
 
+  @Column({ type: 'int', nullable: true })
+  year?: number;
+
+  @Column({ length: 30, nullable: true })
+  group?: string;
+
   @ManyToOne(() => Course, { eager: true, onDelete: 'CASCADE' })
   course: Course;
 
