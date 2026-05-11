@@ -76,6 +76,16 @@ export class AssignmentsService {
     return true;
   }
 
+  async setResource(assignmentId: number, originalFileName: string, storedFileName: string, mimeType: string, publicUrl: string) {
+    const assignment = await this.getById(assignmentId);
+    if (!assignment) throw new NotFoundException('Assignment not found');
+    assignment.resource_original_name = originalFileName || null;
+    assignment.resource_mime = mimeType || null;
+    assignment.resource_url = publicUrl || null;
+    assignment.resource_stored_name = storedFileName || null;
+    return this.assignmentRepo.save(assignment);
+  }
+
   async saveSubmission(
     assignmentId: number,
     studentEmail: string,

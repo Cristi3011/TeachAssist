@@ -30,11 +30,20 @@ export class AttendancesService {
     if (!session) throw new NotFoundException('Session not found');
     const token = randomBytes(16).toString('hex');
     const now = new Date();
-    const end = durationMinutes ? new Date(now.getTime() + durationMinutes * 60000) : session.endTime;
+    const sessionStart = new Date(now);
+    sessionStart.setMinutes(0, 0, 0);
+    const sessionEnd = new Date(sessionStart.getTime() + 60 * 60000);
+
+    const qrDuration = durationMinutes && Number(durationMinutes) > 0 ? Number(durationMinutes) : 5;
+    let qrExpiresAt = new Date(now.getTime() + qrDuration * 60000);
+
+    if (qrExpiresAt.getTime() > sessionEnd.getTime()) qrExpiresAt = new Date(sessionEnd.getTime());
+
     session.qrToken = token;
+    session.qrExpiresAt = qrExpiresAt;
     session.status = 'active';
-    session.startTime = now;
-    session.endTime = end;
+    session.startTime = sessionStart;
+    session.endTime = sessionEnd;
     return this.sessionsRepo.save(session);
   }
 
@@ -53,6 +62,7 @@ export class AttendancesService {
     const now = new Date();
     if (session.status !== 'active') throw new BadRequestException('Session not active');
     if (session.startTime && now < new Date(session.startTime)) throw new BadRequestException('Session not started yet');
+    if (session.qrExpiresAt && now > new Date(session.qrExpiresAt)) throw new BadRequestException('Token expired');
     if (session.endTime && now > new Date(session.endTime)) throw new BadRequestException('Session expired');
 
     const enrollment = await this.enrollmentsService.findAcceptedForCourse(normalized, session.course.id, session.year, session.group);

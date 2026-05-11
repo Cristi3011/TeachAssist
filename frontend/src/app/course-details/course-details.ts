@@ -26,6 +26,11 @@ export class CourseDetails {
   private regeneratingToken = false;
   attendeesForSession: Array<{ studentEmail: string; created_at: string; metadata?: any }> = [];
   private attendancePollInterval: any = null;
+  showCreateMenu = false;
+  showAttendanceHistoryModal = false;
+  attendanceHistory: Array<any> = [];
+  selectedSession: any = null;
+  viewMode: 'list' | 'details' = 'list';
   userEmail = '';
   userName = '';
   loading = false;
@@ -33,13 +38,19 @@ export class CourseDetails {
 
   course: any = null;
   editModel = { title: '', description: '' };
-  announceModel = { title: '', content: '' };
+  announceModel: { title: string; content: string; resourceUrl?: string } = { title: '', content: '', resourceUrl: '' };
   assignmentModel: { title: string; description: string; dueDate: string; kind: 'assignment' | 'material' } = {
     title: '',
     description: '',
     dueDate: '',
     kind: 'assignment',
   };
+  
+  onAssignmentFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input?.files?.[0] || null;
+    (this.assignmentModel as any).resourceFile = file;
+  }
   inviteEmail = '';
   csvFileName = '';
   csvInviteInProgress = false;
@@ -64,7 +75,7 @@ export class CourseDetails {
   announcements: Array<any> = [];
   assignments: Array<any> = [];
   editingAnnouncementId: number | null = null;
-  editingAnnouncementModel: { title: string; content: string } = { title: '', content: '' };
+  editingAnnouncementModel: { title: string; content: string; resourceUrl?: string } = { title: '', content: '', resourceUrl: '' };
   editingAssignmentId: number | null = null;
   editingAssignmentModel: { title: string; description: string; dueDate: string; kind: 'assignment' | 'material' } = {
     title: '',
@@ -72,7 +83,6 @@ export class CourseDetails {
     dueDate: '',
     kind: 'assignment',
   };
-  // menu state for per-item actions (edit/delete) - use composite key to avoid id collisions between types
   itemMenuOpenForId: string | null = null;
   commentDraftByAnnouncement: Record<number, string> = {};
   showCommentFormByAnnouncement: Record<number, boolean> = {};
@@ -132,15 +142,36 @@ export class CourseDetails {
   async createAttendanceSession() {
     if (!this.courseId) return;
     try {
-      // create a session, then immediately open it to get a QR token
-      const res = await fetch(`/api/courses/${this.courseId}/sessions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || 'Nu se poate crea sesiunea de prezență');
-      const created = data.session;
+      // try to find an existing session for the current hour and reuse it
+      const hourStart = new Date();
+      hourStart.setMinutes(0, 0, 0);
+      hourStart.setMilliseconds(0);
+
+      let created: any = null;
+      try {
+        const listRes = await fetch(`/api/courses/${this.courseId}/sessions`);
+        const listData = await listRes.json();
+        if (listRes.ok && Array.isArray(listData)) {
+          const found = listData.find((s: any) => {
+            const sStart = new Date(s.startTime || s.sessionStart || s.start || s.sessionStartTime || s.startTime);
+            return !isNaN(sStart.getTime()) && sStart.getTime() === hourStart.getTime();
+          });
+          if (found) created = found;
+        }
+      } catch (err) {
+        // ignore listing errors and fall back to creating a session
+      }
+
+      if (!created) {
+        const res = await fetch(`/api/courses/${this.courseId}/sessions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || 'Nu se poate crea sesiunea de prezență');
+        created = data.session;
+      }
 
       const openRes = await fetch(`/api/sessions/${created.id}/open`, {
         method: 'POST',
@@ -150,8 +181,15 @@ export class CourseDetails {
       const openData = await openRes.json();
       if (!openRes.ok) throw new Error(openData?.message || 'Nu se poate deschide sesiunea de prezență');
 
-      this.generatedAttendanceSession = { ...created, qrToken: openData.token, endTime: openData.expiresAt };
-      let endsAt = new Date(this.generatedAttendanceSession.endTime).getTime();
+      this.generatedAttendanceSession = {
+        ...created,
+        qrToken: openData.token,
+        qrExpiresAt: openData.qrExpiresAt || openData.expiresAt || null,
+        sessionStart: openData.sessionStart || null,
+        sessionEnd: openData.sessionEnd || null,
+      };
+
+      let endsAt = new Date(this.generatedAttendanceSession.qrExpiresAt || this.generatedAttendanceSession.sessionEnd || Date.now()).getTime();
 
       if (this.attendanceCountdownInterval) {
         clearInterval(this.attendanceCountdownInterval);
@@ -162,7 +200,6 @@ export class CourseDetails {
         const diff = endsAt - now;
 
         if (diff <= 0) {
-          // attempt to regenerate a new token automatically while modal is open
           if (!this.regeneratingToken) {
             this.regeneratingToken = true;
             this.countdownText = 'Regenerare cod...';
@@ -216,6 +253,48 @@ export class CourseDetails {
     }
   }
 
+  async openAttendanceHistory() {
+    if (!this.courseId) return;
+    try {
+      const res = await fetch(`/api/courses/${this.courseId}/sessions`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Nu se pot prelua sesiunile');
+      this.attendanceHistory = Array.isArray(data) ? data : [];
+      this.viewMode = 'list';
+      this.selectedSession = null;
+      this.showAttendanceHistoryModal = true;
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      this.alerts.error(err?.message || 'Network error');
+    }
+  }
+
+  closeAttendanceHistoryModal() {
+    this.showAttendanceHistoryModal = false;
+    this.viewMode = 'list';
+    this.selectedSession = null;
+    this.cdr.markForCheck();
+  }
+
+  async viewSessionDetails(sessionId: number) {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/attendance`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Nu se pot prelua participanții');
+      this.selectedSession = { id: sessionId, attendees: Array.isArray(data) ? data : [] };
+      this.viewMode = 'details';
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      this.alerts.error(err?.message || 'Network error');
+    }
+  }
+
+  backToAttendanceList() {
+    this.viewMode = 'list';
+    this.selectedSession = null;
+    this.cdr.markForCheck();
+  }
+
   private async regenerateSessionToken(sessionId: number): Promise<number | null> {
     try {
       const openRes = await fetch(`/api/sessions/${sessionId}/open`, {
@@ -227,7 +306,13 @@ export class CourseDetails {
       if (!openRes.ok) throw new Error(openData?.message || 'Nu se poate regenera codul');
 
       // update token and endTime
-      this.generatedAttendanceSession = { ...this.generatedAttendanceSession, qrToken: openData.token, endTime: openData.expiresAt };
+      this.generatedAttendanceSession = {
+        ...this.generatedAttendanceSession,
+        qrToken: openData.token,
+        qrExpiresAt: openData.qrExpiresAt || openData.expiresAt || null,
+        sessionStart: openData.sessionStart || this.generatedAttendanceSession.sessionStart || null,
+        sessionEnd: openData.sessionEnd || this.generatedAttendanceSession.sessionEnd || null,
+      };
       const token = this.generatedAttendanceSession?.qrToken;
       let hostToUse = location.hostname;
       const unreachablePrefix = '192.168.56.';
@@ -243,8 +328,7 @@ export class CourseDetails {
       this.attendanceLink = attendanceUrl;
       this.attendanceQrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendanceUrl)}`;
 
-      // return new end timestamp in ms
-      return new Date(openData.expiresAt).getTime();
+      return new Date(openData.qrExpiresAt || openData.expiresAt).getTime();
     } catch (err: any) {
       console.warn('Failed to regenerate token', err?.message || err);
       this.countdownText = 'Eroare la regenerare';
@@ -286,8 +370,29 @@ export class CourseDetails {
   toggleAnnouncementForm() {
     this.showAnnouncementForm = !this.showAnnouncementForm;
     if (!this.showAnnouncementForm) {
-      this.announceModel = { title: '', content: '' };
+      this.announceModel = { title: '', content: '', resourceUrl: '' } as any;
     }
+  }
+
+  toggleCreateMenu() {
+    this.showCreateMenu = !this.showCreateMenu;
+    if (this.showCreateMenu) this.showCourseMenu = false;
+  }
+
+  openAnnouncementForm() {
+    this.showCreateMenu = false;
+    this.showAnnouncementForm = true;
+    this.showAssignmentForm = false;
+    this.announceModel = { title: '', content: '', resourceUrl: '' } as any;
+    this.cdr.markForCheck();
+  }
+
+  openAssignmentForm(kind: 'assignment' | 'material') {
+    this.showCreateMenu = false;
+    this.showAssignmentForm = true;
+    this.showAnnouncementForm = false;
+    this.assignmentModel = { title: '', description: '', dueDate: '', kind };
+    this.cdr.markForCheck();
   }
 
   async removeCourse() {
@@ -365,6 +470,9 @@ export class CourseDetails {
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Nu se pot incarca temele');
     this.assignments = Array.isArray(data) ? data : [];
+    try {
+      console.debug('loadAssignments -> assignments', this.assignments);
+    } catch {}
   }
 
   async saveCourse() {
@@ -500,11 +608,11 @@ export class CourseDetails {
       const res = await fetch('/api/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: this.courseId, title, content }),
+        body: JSON.stringify({ courseId: this.courseId, title, content, resourceUrl: (this.announceModel as any).resourceUrl || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Nu se poate crea anunțul');
-      this.announceModel = { title: '', content: '' };
+      this.announceModel = { title: '', content: '', resourceUrl: '' } as any;
       this.showAnnouncementForm = false;
       await this.loadAnnouncements();
     } catch (err: any) {
@@ -544,23 +652,51 @@ export class CourseDetails {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Nu se poate crea tema');
+      const created = data?.assignment || data;
+      try { console.debug('createAssignment -> created', created); } catch {}
+
+      if (kind === 'material' && (this.assignmentModel as any).resourceFile && created?.id) {
+        try {
+          const form = new FormData();
+          form.append('file', (this.assignmentModel as any).resourceFile);
+          const backendBase = `http://localhost:3000`;
+          const uploadUrl = `${backendBase}/assignments/${created.id}/resource`;
+          const upRes = await fetch(uploadUrl, {
+            method: 'POST',
+            body: form,
+          });
+          const upText = await upRes.text();
+          const upData = upText ? JSON.parse(upText) : null;
+          if (!upRes.ok) {
+            console.warn('Failed to upload material', upData?.message || upData);
+            this.alerts.warning('Materialul nu a putut fi încărcat pe server');
+          }
+        } catch (err: any) {
+          console.warn('Material upload failed', err?.message || err);
+          this.alerts.warning('Eroare la upload material: ' + (err?.message || 'network'));
+        }
+      }
+
       this.assignmentModel = { title: '', description: '', dueDate: '', kind: 'assignment' };
+      try { (this.assignmentModel as any).resourceFile = null; } catch {}
       this.showAssignmentForm = false;
       await this.loadAssignments();
-      this.alerts.success('Tema a fost adaugata');
+      this.alerts.success(kind === 'material' ? 'Materialul a fost adaugat' : 'Tema a fost adaugata');
     } catch (err: any) {
       this.alerts.error(err?.message || 'Network error');
     }
   }
 
   async removeAssignment(id: number) {
-    if (!confirm('Stergi aceasta tema?')) return;
+    const item = this.assignments?.find((a: any) => a.id === id) || null;
+    const isMaterial = item?.kind === 'material';
+    if (!confirm(isMaterial ? 'Stergi acest material?' : 'Stergi aceasta tema?')) return;
     try {
       const res = await fetch(`/api/assignments/${id}`, { method: 'DELETE' });
       const data = await res.json();
-      if (!res.ok || !data.removed) throw new Error(data.message || 'Nu se poate sterge tema');
+      if (!res.ok || !data.removed) throw new Error(data.message || (isMaterial ? 'Nu se poate sterge materialul' : 'Nu se poate sterge tema'));
       await this.loadAssignments();
-      this.alerts.success('Tema stearsa');
+      this.alerts.success(isMaterial ? 'Materialul sters' : 'Tema stearsa');
     } catch (err: any) {
       this.alerts.error(err?.message || 'Network error');
     }
@@ -599,7 +735,7 @@ export class CourseDetails {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Nu se poate actualiza tema');
-      this.alerts.success('Tema actualizată');
+      this.alerts.success(kind === 'material' ? 'Materialul actualizat' : 'Tema actualizata');
       this.editingAssignmentId = null;
       await this.loadAssignments();
     } catch (err: any) {
@@ -636,13 +772,13 @@ export class CourseDetails {
   startEditAnnouncement(item: any) {
     if (this.role !== 'professor') return;
     this.editingAnnouncementId = item.id;
-    this.editingAnnouncementModel = { title: item.title || '', content: item.content || '' };
+    this.editingAnnouncementModel = { title: item.title || '', content: item.content || '', resourceUrl: (item as any).resourceUrl || '' } as any;
     this.cdr.markForCheck();
   }
 
   cancelEditAnnouncement() {
     this.editingAnnouncementId = null;
-    this.editingAnnouncementModel = { title: '', content: '' };
+    this.editingAnnouncementModel = { title: '', content: '', resourceUrl: '' } as any;
     this.cdr.markForCheck();
   }
 
@@ -655,7 +791,7 @@ export class CourseDetails {
       const res = await fetch(`/api/announcements/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content }),
+        body: JSON.stringify({ title, content, resourceUrl: (this.editingAnnouncementModel as any).resourceUrl || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Nu se poate actualiza anunțul');

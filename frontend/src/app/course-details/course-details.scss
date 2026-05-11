@@ -65,6 +65,92 @@ select {
   margin-bottom: 18px;
 }
 
+.hero-toolbar {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  height: 42px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.hero-toolbar .btn-primary.toolbar-btn,
+.hero-toolbar .btn-secondary.toolbar-btn,
+.hero-toolbar a.btn-secondary.toolbar-btn {
+  box-shadow: none;
+}
+
+.hero-toolbar .btn-primary.toolbar-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+}
+
+.hero-toolbar .btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.hero-toolbar .btn-secondary.toolbar-btn,
+.hero-toolbar a.btn-secondary.toolbar-btn {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #1e3a8a;
+}
+
+.hero-toolbar .btn-secondary:hover,
+.hero-toolbar a.btn-secondary:hover {
+  background: #e0e7ff;
+}
+
+.hero-toolbar .hero-actions {
+  margin-left: auto;
+}
+
+.hero-toolbar .menu-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .hero-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-toolbar .toolbar-btn,
+  .hero-toolbar a.toolbar-btn {
+    width: 100%;
+    height: 42px;
+  }
+
+  .hero-toolbar .hero-actions {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}
+
 .hero-head {
   display: flex;
   align-items: flex-start;
@@ -319,6 +405,19 @@ select {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.edit-actions button,
+.edit-actions .btn-primary,
+.edit-actions .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  min-height: 40px;
+  border-radius: 10px;
+  font-weight: 600;
+  box-sizing: border-box;
 }
 
 .btn-secondary {
@@ -993,12 +1092,6 @@ select {
   .section-head {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .section-head-actions {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
   }
 
   .inline-row {

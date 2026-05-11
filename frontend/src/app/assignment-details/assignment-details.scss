@@ -337,6 +337,20 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Normalize edit action buttons appearance inside assignment/details */
+.edit-actions button,
+.edit-actions .btn-primary,
+.edit-actions .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  min-height: 40px;
+  border-radius: 10px;
+  font-weight: 600;
+  box-sizing: border-box;
+}
+
 .muted-copy {
   color: var(--muted);
   background: rgba(63, 81, 181, 0.06);
@@ -362,6 +376,42 @@
   margin-left: 6px;
 }
 .submission-right a:hover {
+  background: rgba(63, 81, 181, 0.08);
+  border-color: rgba(63, 81, 181, 0.12);
+  color: var(--primary-dark);
+}
+
+.material-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+.material-file-left {
+  display: flex;
+  flex-direction: column;
+}
+.material-filename {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 15px;
+}
+.material-file-right .material-link {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.material-file-right .material-link:hover {
   background: rgba(63, 81, 181, 0.08);
   border-color: rgba(63, 81, 181, 0.12);
   color: var(--primary-dark);

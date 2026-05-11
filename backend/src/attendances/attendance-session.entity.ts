@@ -26,6 +26,9 @@ export class AttendanceSession {
 
   @Column({ length: 128, unique: true, nullable: true })
   qrToken?: string;
+  
+  @Column({ type: 'timestamptz', nullable: true })
+  qrExpiresAt?: Date;
 
   @Column({ type: 'enum', enum: ['scheduled', 'active', 'closed'], default: 'scheduled' })
   status: 'scheduled' | 'active' | 'closed';

@@ -18,15 +18,30 @@
               <span>Profesor: {{ course.professor }}</span>
               <span>Creat: {{ formatShortDate(course.created_at) }}</span>
             </div>
-          </div>
 
-          <div class="hero-actions" *ngIf="role === 'professor'">
-            <button class="menu-btn" type="button" (click)="toggleCourseMenu()" aria-label="Actiuni curs">...</button>
-            <div class="hero-menu" *ngIf="showCourseMenu">
-              <button type="button" (click)="openEditMode()" *ngIf="!canEditCourse">Modifica curs</button>
-              <button type="button" (click)="closeEditMode()" *ngIf="canEditCourse">Inchide modificarea</button>
-              <button type="button" (click)="toggleCourseMenu()" [routerLink]="['/dashboard/course', courseId, 'students']">Vezi studenții înscriși</button>
-              <button type="button" (click)="generateAttendanceNow()">Generează cod QR prezență</button>
+            <div class="hero-toolbar" *ngIf="role === 'professor'">
+              <div class="create-actions" style="position:relative;">
+                <button class="btn-primary toolbar-btn" type="button" (click)="toggleCreateMenu()">+ Creează</button>
+                <div class="hero-menu" *ngIf="showCreateMenu">
+                  <button type="button" (click)="openAnnouncementForm()">Anunț</button>
+                  <button type="button" (click)="openAssignmentForm('assignment')">Temă</button>
+                  <button type="button" (click)="openAssignmentForm('material')">Material</button>
+                </div>
+              </div>
+
+              <button class="btn-primary toolbar-btn" type="button" (click)="generateAttendanceNow()">QR prezență</button>
+
+              <a class="btn-secondary toolbar-btn" [routerLink]="['/dashboard/course', courseId, 'students']">Studenți</a>
+
+              <button class="btn-primary toolbar-btn" type="button" (click)="openAttendanceHistory()">Istoric prezențe</button>
+
+              <div class="hero-actions">
+                <button class="menu-btn" type="button" (click)="toggleCourseMenu()" aria-label="Actiuni curs">⋮</button>
+                <div class="hero-menu" *ngIf="showCourseMenu">
+                  <button type="button" (click)="openEditMode()" *ngIf="!canEditCourse">Modifică curs</button>
+                  <button type="button" (click)="closeEditMode()" *ngIf="canEditCourse">Închide editarea</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -142,6 +157,63 @@
 
 </div>
 
+<!-- Attendance History Modal -->
+  <div class="attendance-overlay" *ngIf="showAttendanceHistoryModal">
+
+  <div class="attendance-modal">
+
+    <button
+      class="attendance-close"
+      (click)="closeAttendanceHistoryModal()"
+      aria-label="Închide"
+    >
+      ✕
+    </button>
+
+    <div class="attendance-modal-header">
+      <div>
+        <p class="eyebrow">TeachAssist</p>
+        <h2>Istoric prezențe</h2>
+        <p class="attendance-subtitle">Vizualizează sesiunile și participanții</p>
+      </div>
+    </div>
+
+    <div *ngIf="viewMode === 'list'">
+      <div *ngIf="attendanceHistory.length === 0" class="status-box">Nicio sesiune găsită.</div>
+      <ul *ngIf="attendanceHistory.length > 0" class="attendance-history-list">
+        <li *ngFor="let s of attendanceHistory">
+          <div class="history-row">
+            <div class="history-left">
+              <div class="history-date">{{ formatShortDate(s.startTime) }} {{ s.startTime | date:'HH:mm' }}<span *ngIf="s.endTime"> - {{ s.endTime | date:'HH:mm' }}</span></div>
+            </div>
+            <div class="history-right">
+              <div class="muted-copy">{{ s._attendeesCount || '—' }} prezenți</div>
+              <button class="btn-secondary" type="button" (click)="viewSessionDetails(s.id)">Vezi detalii</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div *ngIf="viewMode === 'details'">
+      <div class="panel">
+        <h3>Participanți ({{ selectedSession?.attendees?.length || 0 }})</h3>
+        <div *ngIf="!selectedSession || (selectedSession?.attendees?.length === 0)" class="status-box">Niciun participant.</div>
+        <ul *ngIf="selectedSession?.attendees?.length > 0" class="participants-list">
+          <li *ngFor="let a of selectedSession.attendees">{{ a.studentEmail }}</li>
+        </ul>
+
+        <div class="edit-actions" style="margin-top:12px;">
+          <button class="btn-secondary" type="button" (click)="backToAttendanceList()">Înapoi</button>
+          <button class="btn-primary" type="button" (click)="closeAttendanceHistoryModal()">Închide</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
         <section class="panel" *ngIf="role === 'professor' && canEditCourse">
           <h2>Setări curs</h2>
           <div class="form-field">
@@ -207,26 +279,6 @@
         <section class="panel panel--wide">
           <div class="section-head">
             <h2>Flux curs</h2>
-            <div class="section-head-actions">
-              <button
-                *ngIf="role === 'professor'"
-                type="button"
-                class="announce-compose-btn"
-                (click)="toggleAnnouncementForm()"
-              >
-                <span class="pencil">✎</span>
-                {{ showAnnouncementForm ? 'Inchide' : 'Anunt nou' }}
-              </button>
-              <button
-                *ngIf="role === 'professor'"
-                type="button"
-                class="announce-compose-btn"
-                (click)="toggleAssignmentForm()"
-              >
-                <span class="pencil">✎</span>
-                {{ showAssignmentForm ? 'Inchide' : 'Tema / material nou' }}
-              </button>
-            </div>
           </div>
 
           <div class="announce-form" *ngIf="role === 'professor' && showAnnouncementForm">
@@ -243,13 +295,6 @@
 
           <div class="announce-form" *ngIf="role === 'professor' && showAssignmentForm">
             <div class="form-field">
-              <label>Tip postare</label>
-              <select [(ngModel)]="assignmentModel.kind">
-                <option value="assignment">Tema</option>
-                <option value="material">Material</option>
-              </select>
-            </div>
-            <div class="form-field">
               <label>Titlu</label>
               <input [(ngModel)]="assignmentModel.title" />
             </div>
@@ -260,6 +305,10 @@
             <div class="form-field" *ngIf="assignmentModel.kind === 'assignment'">
               <label>Deadline (opțional)</label>
               <input type="date" [(ngModel)]="assignmentModel.dueDate" />
+            </div>
+            <div class="form-field" *ngIf="assignmentModel.kind === 'material'">
+              <label>Adaugă PDF/material</label>
+              <input type="file" accept=".pdf,.doc,.docx,.txt" (change)="onAssignmentFileSelected($event)" />
             </div>
             <button class="btn-primary" (click)="createAssignment()">Publica postarea</button>
           </div>
@@ -283,7 +332,7 @@
                   <h3>{{ item.title }}</h3>
                   <p>
                     {{ formatShortDate(item.created_at) }}
-                    <span *ngIf="item.type === 'assignment' && item.kind === 'assignment' && item.due_at">| Deadline: {{ formatShortDate(item.due_at) }}</span>
+                    <span *ngIf="item.type === 'assignment' && item.kind === 'assignment' && (item.due_at || item.dueAt || item.dueDate || item.due_date)">| Deadline: {{ formatShortDate(item.due_at || item.dueAt || item.dueDate || item.due_date) }}</span>
                   </p>
                 </div>
                 <div class="announcement-actions">
@@ -308,8 +357,8 @@
                     <textarea [(ngModel)]="editingAnnouncementModel.content"></textarea>
                   </div>
                   <div class="edit-actions">
-                    <button class="btn-secondary" type="button" (click)="cancelEditAnnouncement()">Anulează</button>
                     <button class="btn-primary" type="button" (click)="saveAnnouncement(item.id)">Salvează</button>
+                    <button class="btn-secondary" type="button" (click)="cancelEditAnnouncement()">Anulează</button>
                   </div>
                 </div>
                 <ng-template #showAnnouncement>
@@ -355,8 +404,8 @@
                     <input type="date" [(ngModel)]="editingAssignmentModel.dueDate" />
                   </div>
                   <div class="edit-actions">
-                    <button class="btn-secondary" type="button" (click)="cancelEditAssignment()">Anulează</button>
                     <button class="btn-primary" type="button" (click)="saveAssignment(item.id)">Salvează</button>
+                    <button class="btn-secondary" type="button" (click)="cancelEditAssignment()">Anulează</button>
                   </div>
                 </div>
                 <ng-template #showAssignment>

@@ -59,6 +59,9 @@ export class AssignmentsController {
         description: saved.description,
         kind: saved.kind,
         due_at: saved.due_at,
+        resource_url: (saved as any).resource_url || null,
+        resource_original_name: (saved as any).resource_original_name || null,
+        resource_mime: (saved as any).resource_mime || null,
         created_at: saved.created_at,
       },
     };
@@ -73,6 +76,9 @@ export class AssignmentsController {
       description: item.description,
       kind: item.kind,
       due_at: item.due_at,
+      resource_url: (item as any).resource_url || null,
+      resource_original_name: (item as any).resource_original_name || null,
+      resource_mime: (item as any).resource_mime || null,
       created_at: item.created_at,
     }));
   }
@@ -87,9 +93,70 @@ export class AssignmentsController {
       description: assignment.description,
       kind: assignment.kind,
       due_at: assignment.due_at,
+      resource_url: (assignment as any).resource_url || null,
+      resource_original_name: (assignment as any).resource_original_name || null,
+      resource_mime: (assignment as any).resource_mime || null,
       created_at: assignment.created_at,
       courseId: assignment.course?.id,
     };
+  }
+
+  @Post(':id/resource')
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  async uploadResource(
+    @Param('id') id: string,
+    @UploadedFile() file: any,
+  ) {
+    if (!file) throw new BadRequestException('File required');
+
+    const maxSizeBytes = 15 * 1024 * 1024;
+    if ((file.size || 0) > maxSizeBytes) {
+      throw new BadRequestException('Fisier prea mare (max 15MB)');
+    }
+
+    const originalName = (file.originalname || 'material').toString();
+    const safeOriginalBase = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storedFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safeOriginalBase}`;
+    const matDir = join(process.cwd(), 'uploads', 'materials');
+    if (!existsSync(matDir)) mkdirSync(matDir, { recursive: true });
+    const destination = join(matDir, storedFileName);
+    try {
+      writeFileSync(destination, file.buffer);
+
+      const publicUrl = `/api/assignments/${id}/resource`;
+
+      const saved = await this.assignments.setResource(Number(id), originalName, storedFileName, (file.mimetype || 'application/octet-stream').toString(), publicUrl);
+
+      return {
+        message: 'Resource uploaded',
+        resource: {
+          resource_url: saved.resource_url,
+          resource_original_name: saved.resource_original_name,
+          resource_mime: saved.resource_mime,
+        },
+      };
+    } catch (err: any) {
+      console.error('Failed to save uploaded resource file', err);
+      throw new BadRequestException('Failed to save uploaded resource file: ' + (err?.message || 'unknown'));
+    }
+  }
+
+  @Get(':id/resource')
+  async serveResource(@Param('id') id: string, @Res() res: Response) {
+    const assignment = await this.assignments.getById(Number(id));
+    if (!assignment) throw new NotFoundException('Assignment not found');
+    const matDir = join(process.cwd(), 'uploads', 'materials');
+    const storedFile = (assignment as any).resource_stored_name || null;
+    if (!storedFile) {
+      throw new NotFoundException('Resource file not found');
+    }
+    const filePath = join(matDir, storedFile);
+    if (!existsSync(filePath)) throw new NotFoundException('Resource file not found');
+
+    const contentType = (assignment as any).resource_mime || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${((assignment as any).resource_original_name || 'file').replace(/"/g, '')}"`);
+    return res.sendFile(filePath);
   }
 
   @Get('submissions/mine')

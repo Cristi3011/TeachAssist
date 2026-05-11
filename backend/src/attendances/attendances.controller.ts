@@ -32,7 +32,13 @@ export class AttendancesController {
   @Post('sessions/:sessionId/open')
   async openSession(@Param('sessionId') sessionId: string, @Body() body: OpenSessionDto) {
     const created = await this.attendances.openSession(Number(sessionId), body?.durationMinutes);
-    return { message: 'Session opened', token: created.qrToken, expiresAt: created.endTime };
+    return {
+      message: 'Session opened',
+      token: created.qrToken,
+      qrExpiresAt: created.qrExpiresAt,
+      sessionStart: created.startTime,
+      sessionEnd: created.endTime,
+    };
   }
 
   @Post('attendance/scan')

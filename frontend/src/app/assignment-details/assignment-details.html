@@ -13,6 +13,18 @@
         <h1>{{ assignment.title }}</h1>
         <p class="description">{{ assignment.description }}</p>
 
+        <div *ngIf="assignment.kind === 'material'">
+          <div class="material-file" *ngIf="(assignment.resource_original_name || assignment.resource_originalName) || (assignment.resource_url || assignment.resourceUrl)">
+            <div class="material-file-left">
+              <div class="material-filename">{{ assignment.resource_original_name || assignment.resource_originalName || 'Material' }}</div>
+              <div class="muted-copy" *ngIf="assignment.resource_mime">{{ assignment.resource_mime }}</div>
+            </div>
+            <div class="material-file-right">
+              <a *ngIf="(assignment.resource_url || assignment.resourceUrl)" [href]="(assignment.resource_url || assignment.resourceUrl)" target="_blank" rel="noopener" class="material-link">Vizualizează material</a>
+            </div>
+          </div>
+        </div>
+
         <div class="meta-row">
           <span>Publicat: {{ formatShortDate(assignment.created_at) }}</span>
           <span *ngIf="assignment.kind === 'assignment' && assignment.due_at">
@@ -52,7 +64,7 @@
       </p>
       </section>
 
-      <section class="panel" *ngIf="role === 'professor'">
+      <section class="panel" *ngIf="assignment.kind === 'assignment' && role === 'professor'">
         <h2>Teme predate</h2>
         <div *ngIf="submissions.length > 0; else noSubmissionsTpl">
           <ul class="submissions-list">

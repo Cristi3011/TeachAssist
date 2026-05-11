@@ -52,8 +52,8 @@ body{
 .nav-container{display:flex;gap:10px}
 .nav-btn{
 	padding:8px 14px;
-	background:var(--primary) !important;
-	color:#000 !important;
+	background:var(--primary);
+	color:#fff;
 	border:none;
 	border-radius:8px;
 	cursor:pointer;
@@ -61,16 +61,16 @@ body{
 	min-width:64px;
 	text-align:center;
 }
-.nav-btn:hover{background:var(--primary-dark) !important}
+.nav-btn:hover{background:var(--primary-dark)}
 
 .nav-btn--secondary{
-	background:#e0e7ff !important;
-	color:#1f2a44 !important;
+	background:#e0e7ff;
+	color:#1f2a44;
 	border:1px solid #c7d2fe;
 }
 
 .nav-btn--secondary:hover{
-	background:#c7d2fe !important;
+	background:#c7d2fe;
 }
 
 .page-center{

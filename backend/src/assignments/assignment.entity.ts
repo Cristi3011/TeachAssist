@@ -23,4 +23,17 @@ export class Assignment {
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at!: Date;
+
+  @Column({ type: 'varchar', length: 400, nullable: true })
+  resource_url?: string | null;
+
+  @Column({ type: 'varchar', length: 180, nullable: true })
+  resource_original_name?: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  resource_mime?: string | null;
+  
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  resource_stored_name?: string | null;
+
 }
