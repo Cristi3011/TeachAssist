@@ -29,11 +29,11 @@
                 </div>
               </div>
 
-              <button class="btn-primary toolbar-btn" type="button" (click)="generateAttendanceNow()">QR prezență</button>
+              <button class="btn-secondary toolbar-btn" type="button" (click)="generateAttendanceNow()">QR prezență</button>
 
               <a class="btn-secondary toolbar-btn" [routerLink]="['/dashboard/course', courseId, 'students']">Studenți</a>
 
-              <button class="btn-primary toolbar-btn" type="button" (click)="openAttendanceHistory()">Istoric prezențe</button>
+              <button class="btn-secondary toolbar-btn" type="button" (click)="openAttendanceHistory()">Prezențe</button>
 
               <div class="hero-actions">
                 <button class="menu-btn" type="button" (click)="toggleCourseMenu()" aria-label="Actiuni curs">⋮</button>
@@ -157,7 +157,6 @@
 
 </div>
 
-<!-- Attendance History Modal -->
   <div class="attendance-overlay" *ngIf="showAttendanceHistoryModal">
 
   <div class="attendance-modal">
@@ -173,7 +172,7 @@
     <div class="attendance-modal-header">
       <div>
         <p class="eyebrow">TeachAssist</p>
-        <h2>Istoric prezențe</h2>
+        <h2>Prezențe</h2>
         <p class="attendance-subtitle">Vizualizează sesiunile și participanții</p>
       </div>
     </div>
@@ -184,10 +183,10 @@
         <li *ngFor="let s of attendanceHistory">
           <div class="history-row">
             <div class="history-left">
-              <div class="history-date">{{ formatShortDate(s.startTime) }} {{ s.startTime | date:'HH:mm' }}<span *ngIf="s.endTime"> - {{ s.endTime | date:'HH:mm' }}</span></div>
+              <div class="history-date">{{ formatShortDate(s.startTime) }} {{ formatHourInterval(s.startTime) }}</div>
             </div>
             <div class="history-right">
-              <div class="muted-copy">{{ s._attendeesCount || '—' }} prezenți</div>
+              <div class="muted-copy">{{ s._attendeesCount ?? '—' }} prezenți</div>
               <button class="btn-secondary" type="button" (click)="viewSessionDetails(s.id)">Vezi detalii</button>
             </div>
           </div>
@@ -306,6 +305,10 @@
               <label>Deadline (opțional)</label>
               <input type="date" [(ngModel)]="assignmentModel.dueDate" />
             </div>
+            <div class="form-field">
+              <label>Punctaj maxim</label>
+              <input type="number" min="1" max="1000" [(ngModel)]="assignmentModel.maxPoints" />
+            </div>
             <div class="form-field" *ngIf="assignmentModel.kind === 'material'">
               <label>Adaugă PDF/material</label>
               <input type="file" accept=".pdf,.doc,.docx,.txt" (change)="onAssignmentFileSelected($event)" />
@@ -329,7 +332,10 @@
                     <span class="post-type-icon" aria-hidden="true">{{ item.kind === 'assignment' ? '📝' : '📘' }}</span>
                     <span>{{ item.kind === 'assignment' ? 'Tema' : 'Material' }}</span>
                   </div>
-                  <h3>{{ item.title }}</h3>
+                  <h3>
+                    {{ item.title }}
+                    <small class="muted-copy" *ngIf="item.type === 'assignment' && item.kind === 'assignment' && (item.max_points || item.maxPoints)" style="margin-left:8px; font-weight:600;">({{ item.max_points || item.maxPoints }} puncte)</small>
+                  </h3>
                   <p>
                     {{ formatShortDate(item.created_at) }}
                     <span *ngIf="item.type === 'assignment' && item.kind === 'assignment' && (item.due_at || item.dueAt || item.dueDate || item.due_date)">| Deadline: {{ formatShortDate(item.due_at || item.dueAt || item.dueDate || item.due_date) }}</span>
@@ -402,6 +408,10 @@
                   <div class="form-field" *ngIf="editingAssignmentModel.kind === 'assignment'">
                     <label>Deadline (opțional)</label>
                     <input type="date" [(ngModel)]="editingAssignmentModel.dueDate" />
+                  </div>
+                  <div class="form-field">
+                    <label>Punctaj maxim</label>
+                    <input type="number" min="1" max="1000" [(ngModel)]="editingAssignmentModel.maxPoints" />
                   </div>
                   <div class="edit-actions">
                     <button class="btn-primary" type="button" (click)="saveAssignment(item.id)">Salvează</button>

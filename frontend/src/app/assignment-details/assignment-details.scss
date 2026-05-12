@@ -170,25 +170,6 @@
 
 
 .submit-row { align-items: center; }
-.btn-primary {
-  border: none;
-  border-radius: 10px;
-  background: #3f51b5;
-  color: #fff;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
-
-.btn-primary:hover {
-  background: #2c3e9f;
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
 .comments-list {
   display: grid;
   gap: 8px;
@@ -298,13 +279,13 @@
 
 .submission-line {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid #e6eefc;
-  border-radius: 10px;
-  background: #ffffff;
+
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .submission-line.selected {
@@ -314,7 +295,8 @@
 }
 
 .submission-left {
-  min-width: 0;
+  flex: 1;
+  min-width: 0; 
 }
 
 .submission-left strong {
@@ -322,10 +304,14 @@
 }
 
 .submission-right {
+  flex: 0 0 auto;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  color: var(--muted);
+
+  flex-wrap: wrap; 
+  justify-content: flex-end;
+  max-width: 100%;
 }
 
 .assignment-shell {
@@ -337,7 +323,6 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Normalize edit action buttons appearance inside assignment/details */
 .edit-actions button,
 .edit-actions .btn-primary,
 .edit-actions .btn-secondary {
@@ -379,6 +364,99 @@
   background: rgba(63, 81, 181, 0.08);
   border-color: rgba(63, 81, 181, 0.12);
   color: var(--primary-dark);
+}
+
+.grade-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.grade-controls .grade-input {
+  width: 72px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font: inherit;
+  font-size: 13px;
+  color: #0f172a;
+  background: #fff;
+}
+.grade-controls .grade-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  border-color: rgba(99,102,241,0.6);
+}
+.grade-controls .grade-btn {
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+
+  .submission-line {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .submission-left {
+    width: 100%;
+  }
+
+  .submission-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .submission-right a {
+    text-align: center;
+    width: 100%;
+  }
+
+  .grade-controls {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .grade-controls .grade-input {
+    flex: 1;
+    max-width: 140px;
+  }
+
+  .grade-controls .grade-btn {
+    flex: 1;
+  }
+
+  .grade-display {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+}
+
+.grade-display {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #065f46; 
+  background: rgba(6,95,70,0.06);
+  border: 1px solid rgba(6,95,70,0.08);
+  margin-left: 8px;
+  min-height: 32px;
+}
+
+@media (max-width: 640px) {
+  .grade-display { font-size: 12px; padding: 5px 8px; }
 }
 
 .material-file {
@@ -454,5 +532,19 @@
     font-size: 12px;
     flex-direction: column;
     gap: 6px;
+  }
+    .submission-line {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .grade-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .submission-right a {
+    flex: 1;
+    text-align: center;
   }
 }

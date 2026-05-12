@@ -21,6 +21,15 @@ export class AssignmentSubmission {
   @Column({ type: 'bigint' })
   sizeBytes!: string;
 
+  @Column({ type: 'int', nullable: true })
+  grade!: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  graded_at!: Date | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  graded_by!: string | null;
+
   @ManyToOne(() => Assignment, { eager: true, onDelete: 'CASCADE' })
   assignment!: Assignment;
 

@@ -80,30 +80,6 @@
   outline: none;
 }
 
-/* BUTTON */
-
-.btn-primary {
-  background: var(--primary);
-  border: none;
-  color: white;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
-}
-
-.btn-primary:hover {
-  background: var(--primary-hover);
-}
-
-.btn-primary:active {
-  transform: scale(0.98);
-}
-
-/* ANIMATION */
-
 @keyframes fadeIn {
   from {
     opacity: 0;

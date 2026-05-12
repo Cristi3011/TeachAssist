@@ -1,14 +1,14 @@
 <div class="assignment-page">
   <div class="assignment-shell">
     <div class="assignment-topbar">
-      <a class="back-link" [routerLink]="['/dashboard/course', courseId]">Inapoi la curs</a>
+      <a class="back-link" [routerLink]="['/dashboard/course', courseId]">Înapoi la curs</a>
     </div>
 
-    <div *ngIf="loading" class="status-box">Se incarca tema...</div>
+    <div *ngIf="loading" class="status-box">Se încarcă tema...</div>
     <div *ngIf="error" class="status-box status-box--error">{{ error }}</div>
 
     <ng-container *ngIf="!loading && assignment">
-      <section class="assignment-card">
+      <section class="section-block assignment-card">
         <p class="eyebrow">{{ assignment.kind === 'material' ? 'Material' : 'Tema' }}</p>
         <h1>{{ assignment.title }}</h1>
         <p class="description">{{ assignment.description }}</p>
@@ -27,6 +27,7 @@
 
         <div class="meta-row">
           <span>Publicat: {{ formatShortDate(assignment.created_at) }}</span>
+          <span *ngIf="assignment.kind === 'assignment' && (assignment.max_points || assignment.maxPoints)" style="margin-left:12px; color:#475569; font-weight:600;">Punctaj maxim: {{ assignment.max_points || assignment.maxPoints }}</span>
           <span *ngIf="assignment.kind === 'assignment' && assignment.due_at">
             Termen limită: {{ formatDeadline(assignment.due_at) }}
             <span *ngIf="isPastDeadline" class="status-box--error" style="margin-left:8px; padding:2px 6px; border-radius:6px; font-size:12px;">Expirat</span>
@@ -34,7 +35,7 @@
         </div>
       </section>
 
-      <section class="panel" *ngIf="assignment.kind === 'assignment' && role === 'student'">
+      <section class="section-block panel" *ngIf="assignment.kind === 'assignment' && role === 'student'">
         <h2>Tema ta</h2>
         <div class="submit-row">
           <input
@@ -61,10 +62,12 @@
           <a [href]="'http://localhost:3000/assignments/submissions/' + mySubmission.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
           &nbsp;·&nbsp;
           <a [href]="'http://localhost:3000/assignments/submissions/' + mySubmission.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
-      </p>
+          <span *ngIf="mySubmission.grade !== undefined && mySubmission.grade !== null" style="margin-left:12px; color:#0b6; font-weight:700;">Nota: {{ mySubmission.grade }}</span>
+          <span *ngIf="mySubmission.grade === null || mySubmission.grade === undefined" style="margin-left:12px; color:#6b7280;">(fără notă)</span>
+        </p>
       </section>
 
-      <section class="panel" *ngIf="assignment.kind === 'assignment' && role === 'professor'">
+      <section class="section-block panel" *ngIf="assignment.kind === 'assignment' && role === 'professor'">
         <h2>Teme predate</h2>
         <div *ngIf="submissions.length > 0; else noSubmissionsTpl">
           <ul class="submissions-list">
@@ -75,15 +78,21 @@
                 [class.selected]="selectedStudentForComment === s.studentEmail"
               >
                 <div class="submission-left">
-                  <strong>{{ s.studentEmail }}</strong>
+                    <strong>{{ s.studentName || s.studentEmail }}</strong>
                   <div class="muted-copy">{{ s.originalFileName }}</div>
                 </div>
-                <div class="submission-right">
-                  <div class="muted-copy">{{ formatShortDate(s.created_at) }}</div>
-                  <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
-                  &nbsp;·&nbsp;
-                  <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
-                </div>
+                  <div class="submission-right">
+                    <div class="muted-copy">{{ formatShortDate(s.created_at) }}</div>
+                    <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+                    &nbsp;·&nbsp;
+                    <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
+                    &nbsp;·&nbsp;
+                    <label class="grade-controls" style="margin-left:8px; display:inline-flex; align-items:center; gap:8px;">
+                      <input class="grade-input" type="number" [(ngModel)]="gradeDrafts[s.id]" [min]="0" [max]="assignment?.max_points || assignment?.maxPoints || 100" />
+                      <button class="btn-primary grade-btn" type="button" (click)="gradeSubmission(s.id)">Salvează</button>
+                    </label>
+                        <div *ngIf="s.grade !== undefined && s.grade !== null" class="grade-display">Nota: {{ s.grade }} </div>
+                  </div>
               </div>
             </li>
           </ul>
@@ -93,7 +102,7 @@
         </ng-template>
       </section>
 
-      <section class="panel">
+      <section class="section-block panel">
         <h2>Comentarii private</h2>
 
         <div class="comments-list" *ngIf="displayedComments.length > 0; else noCommentsTpl">

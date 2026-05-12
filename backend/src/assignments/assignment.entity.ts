@@ -35,5 +35,8 @@ export class Assignment {
   
   @Column({ type: 'varchar', length: 200, nullable: true })
   resource_stored_name?: string | null;
+  
+  @Column({ type: 'int', nullable: false, default: 100 })
+  max_points!: number;
 
 }

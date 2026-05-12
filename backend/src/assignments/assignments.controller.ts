@@ -6,6 +6,7 @@ import {
   Query,
   Delete,
   Param,
+  Patch,
   BadRequestException,
   NotFoundException,
   UseInterceptors,
@@ -41,6 +42,7 @@ export class AssignmentsController {
       description: string;
       dueDate?: string | null;
       kind?: 'assignment' | 'material' | null;
+      maxPoints?: number | null;
     },
   ) {
     const saved = await this.assignments.create(
@@ -49,6 +51,7 @@ export class AssignmentsController {
       body.description,
       body.dueDate,
       body.kind,
+      body.maxPoints,
     );
 
     return {
@@ -59,6 +62,8 @@ export class AssignmentsController {
         description: saved.description,
         kind: saved.kind,
         due_at: saved.due_at,
+        max_points: (saved as any).max_points || 100,
+        maxPoints: (saved as any).max_points || 100,
         resource_url: (saved as any).resource_url || null,
         resource_original_name: (saved as any).resource_original_name || null,
         resource_mime: (saved as any).resource_mime || null,
@@ -76,6 +81,8 @@ export class AssignmentsController {
       description: item.description,
       kind: item.kind,
       due_at: item.due_at,
+      max_points: (item as any).max_points || 100,
+      maxPoints: (item as any).max_points || 100,
       resource_url: (item as any).resource_url || null,
       resource_original_name: (item as any).resource_original_name || null,
       resource_mime: (item as any).resource_mime || null,
@@ -93,11 +100,45 @@ export class AssignmentsController {
       description: assignment.description,
       kind: assignment.kind,
       due_at: assignment.due_at,
+      max_points: (assignment as any).max_points || 100,
+      maxPoints: (assignment as any).max_points || 100,
       resource_url: (assignment as any).resource_url || null,
       resource_original_name: (assignment as any).resource_original_name || null,
       resource_mime: (assignment as any).resource_mime || null,
       created_at: assignment.created_at,
       courseId: assignment.course?.id,
+    };
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body()
+    body: { title?: string; description?: string; dueDate?: string | null; kind?: string | null; maxPoints?: number | null },
+  ) {
+    const saved = await this.assignments.update(Number(id), {
+      title: body.title,
+      description: body.description,
+      dueDate: body.dueDate,
+      kind: body.kind as any,
+      maxPoints: body.maxPoints,
+    });
+
+    return {
+      message: 'Assignment updated',
+      assignment: {
+        id: saved.id,
+        title: saved.title,
+        description: saved.description,
+        kind: saved.kind,
+        due_at: saved.due_at,
+        max_points: (saved as any).max_points || 100,
+        maxPoints: (saved as any).max_points || 100,
+        resource_url: (saved as any).resource_url || null,
+        resource_original_name: (saved as any).resource_original_name || null,
+        resource_mime: (saved as any).resource_mime || null,
+        created_at: saved.created_at,
+      },
     };
   }
 
@@ -169,6 +210,9 @@ export class AssignmentsController {
       originalFileName: item.originalFileName,
       mimeType: item.mimeType,
       sizeBytes: Number(item.sizeBytes || 0),
+      grade: typeof (item as any).grade === 'number' ? (item as any).grade : null,
+      graded_at: (item as any).graded_at || null,
+      graded_by: (item as any).graded_by || null,
       created_at: item.created_at,
     }));
   }
@@ -184,6 +228,9 @@ export class AssignmentsController {
       originalFileName: item.originalFileName,
       mimeType: item.mimeType,
       sizeBytes: Number(item.sizeBytes || 0),
+      grade: typeof (item as any).grade === 'number' ? (item as any).grade : null,
+      graded_at: (item as any).graded_at || null,
+      graded_by: (item as any).graded_by || null,
       created_at: item.created_at,
     };
   }
@@ -191,15 +238,31 @@ export class AssignmentsController {
   @Get(':id/submissions')
   async listForAssignment(@Param('id') id: string) {
     const list = await this.assignments.listSubmissionsForAssignment(Number(id));
-    return list.map((item) => ({
-      id: item.id,
-      assignmentId: item.assignment?.id,
-      studentEmail: item.studentEmail,
-      originalFileName: item.originalFileName,
-      mimeType: item.mimeType,
-      sizeBytes: Number(item.sizeBytes || 0),
-      created_at: item.created_at,
-    }));
+    const results = await Promise.all(
+      list.map(async (item) => {
+        let studentName: string | null = null;
+        try {
+          const u = await this.usersService.findByEmail(item.studentEmail || '');
+          studentName = u ? (u.username || u.email) : null;
+        } catch {}
+
+        return {
+          id: item.id,
+          assignmentId: item.assignment?.id,
+          studentEmail: item.studentEmail,
+          studentName,
+          originalFileName: item.originalFileName,
+          mimeType: item.mimeType,
+          sizeBytes: Number(item.sizeBytes || 0),
+          grade: typeof (item as any).grade === 'number' ? (item as any).grade : null,
+          graded_at: (item as any).graded_at || null,
+          graded_by: (item as any).graded_by || null,
+          created_at: item.created_at,
+        };
+      }),
+    );
+
+    return results;
   }
 
   @Get(':id/comments')
@@ -309,7 +372,27 @@ export class AssignmentsController {
         originalFileName: saved.originalFileName,
         mimeType: saved.mimeType,
         sizeBytes: Number(saved.sizeBytes || 0),
+        grade: typeof (saved as any).grade === 'number' ? (saved as any).grade : null,
+        graded_at: (saved as any).graded_at || null,
+        graded_by: (saved as any).graded_by || null,
         created_at: saved.created_at,
+      },
+    };
+  }
+
+  @Patch('submissions/:submissionId/grade')
+  async gradeSubmission(@Param('submissionId') submissionId: string, @Body() body: { graderEmail?: string | null; grade?: number | null }) {
+    const saved = await this.assignments.setSubmissionGrade(Number(submissionId), body.graderEmail || null, body.grade === undefined ? null : body.grade);
+
+    return {
+      message: 'Nota salvata',
+      submission: {
+        id: saved.id,
+        assignmentId: saved.assignment?.id,
+        studentEmail: saved.studentEmail,
+        grade: typeof (saved as any).grade === 'number' ? (saved as any).grade : null,
+        graded_at: (saved as any).graded_at || null,
+        graded_by: (saved as any).graded_by || null,
       },
     };
   }

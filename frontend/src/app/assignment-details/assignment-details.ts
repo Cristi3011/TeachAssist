@@ -26,6 +26,7 @@ export class AssignmentDetails {
   submitInProgress = false;
   mySubmission: any = null;
   submissions: Array<any> = [];
+  gradeDrafts: { [submissionId: number]: number | null } = {};
   allComments: Array<any> = [];
   selectedStudentForComment: string | null = null;
 
@@ -95,8 +96,36 @@ export class AssignmentDetails {
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) throw new Error((data && data.message) || 'Nu se pot incarca predarile');
     this.submissions = Array.isArray(data) ? data : [];
+    this.gradeDrafts = {};
+    for (const s of this.submissions) {
+      this.gradeDrafts[s.id] = typeof s.grade === 'number' ? s.grade : null;
+    }
     if (this.role === 'professor' && !this.selectedStudentForComment && this.submissions.length > 0) {
       this.selectedStudentForComment = this.submissions[0].studentEmail || null;
+    }
+  }
+
+  async gradeSubmission(submissionId: number) {
+    const draft = this.gradeDrafts[submissionId];
+    try {
+      const res = await fetch(`/api/assignments/submissions/${submissionId}/grade`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ graderEmail: this.userEmail, grade: draft }),
+      });
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!res.ok) throw new Error((data && data.message) || 'Nu s-a putut salva nota');
+      const updated = data && data.submission ? data.submission : null;
+      if (updated) {
+        const idx = this.submissions.findIndex((x) => x.id === updated.id);
+        if (idx !== -1) this.submissions[idx] = { ...this.submissions[idx], ...updated };
+      }
+      this.alerts.success('Nota salvata');
+    } catch (err: any) {
+      this.alerts.error(err?.message || 'Network error');
+    } finally {
+      this.cdr.markForCheck();
     }
   }
 
@@ -247,7 +276,6 @@ export class AssignmentDetails {
 
   formatDeadline(value?: string | Date | null) {
     if (!value) return '';
-    // Parse date safely: accept date-only 'YYYY-MM-DD' or full ISO
     let date: Date;
     try {
       const s = String(value);

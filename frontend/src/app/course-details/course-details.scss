@@ -65,6 +65,23 @@ select {
   margin-bottom: 18px;
 }
 
+/* place the three-dot menu in the top-right corner of the hero card */
+.hero-card {
+  position: relative;
+}
+
+.hero-card .hero-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 30;
+}
+
+/* ensure header content doesn't get covered by the absolute menu */
+.hero-card .hero-head {
+  padding-right: 56px;
+}
+
 .hero-toolbar {
   margin-top: 18px;
   display: flex;
@@ -148,6 +165,13 @@ select {
   .hero-toolbar .hero-actions {
     margin-left: 0;
     align-self: flex-end;
+  }
+
+  .hero-card .hero-actions {
+    position: relative;
+    top: auto;
+    right: auto;
+    padding: 0;
   }
 }
 
@@ -370,21 +394,6 @@ select {
   font-size: 13px;
 }
 
-.btn-primary {
-  border: none;
-  border-radius: 10px;
-  background: var(--primary);
-  color: #fff;
-  padding: 11px 16px;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: var(--primary-dark);
-}
-
 .btn-danger {
   border: 1px solid #ef4444;
   border-radius: 10px;
@@ -535,7 +544,7 @@ select {
 .announcement-card {
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible; 
 }
 
 .announcement-card--clickable {
@@ -624,6 +633,13 @@ select {
   flex-direction: column;
   z-index: 30;
   overflow: hidden;
+}
+
+.announcement-card .item-menu-list {
+  right: 100%;
+  left: auto;
+  margin-right: 8px;
+  z-index: 60;
 }
 
 .item-menu-item {
@@ -844,7 +860,7 @@ select {
   position: relative;
 
   width: 100%;
-  max-width: 520px;
+  max-width: 720px;
 
   background: rgba(255,255,255,0.92);
 
@@ -1036,6 +1052,26 @@ select {
 }
 
 @media (max-width: 640px) {
+  .hero-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .hero-toolbar .btn-primary,
+  .hero-toolbar .btn-secondary,
+  .hero-toolbar a.btn-secondary {
+    width: 100%;
+    flex: unset;
+  }
+
+  .hero-toolbar .btn-primary,
+  .hero-toolbar .btn-secondary,
+  .hero-toolbar a {
+    height: 44px;
+    font-size: 14px;
+  }
 
   .attendance-modal {
     padding: 24px;
@@ -1085,10 +1121,6 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .hero-head {
-    flex-direction: column;
-  }
-
   .section-head {
     align-items: flex-start;
     flex-direction: column;
@@ -1102,4 +1134,15 @@ select {
     width: 100%;
   }
 
+}
+.hero-card {
+  position: relative;
+}
+
+.hero-card .hero-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: auto;
+  z-index: 50;
 }

@@ -29,6 +29,7 @@ export class AssignmentsService {
     description: string,
     dueDate?: string | null,
     kind?: 'assignment' | 'material' | null,
+    maxPoints?: number | null,
   ) {
     const cleanTitle = (title || '').trim();
     const cleanDescription = (description || '').trim();
@@ -56,6 +57,7 @@ export class AssignmentsService {
       description: cleanDescription,
       kind: normalizedKind as 'assignment' | 'material',
       due_at: dueAt,
+      max_points: typeof maxPoints === 'number' && !Number.isNaN(maxPoints) ? Math.max(1, Math.min(1000, Math.floor(maxPoints))) : 100,
       course,
     });
 
@@ -74,6 +76,40 @@ export class AssignmentsService {
     if (!found) return false;
     await this.assignmentRepo.remove(found);
     return true;
+  }
+
+  async update(id: number, patch: { title?: string; description?: string; dueDate?: string | null; kind?: string | null; maxPoints?: number | null }) {
+    const found = await this.getById(id);
+    if (!found) throw new NotFoundException('Assignment not found');
+
+    if (typeof patch.title === 'string') found.title = (patch.title || '').trim();
+    if (typeof patch.description === 'string') found.description = (patch.description || '').trim();
+    if (patch.dueDate !== undefined) {
+      const cleanDueDate = (patch.dueDate || '').toString().trim();
+      if (cleanDueDate) {
+        const parsed = new Date(cleanDueDate);
+        if (Number.isNaN(parsed.getTime())) throw new BadRequestException('Invalid due date');
+        found.due_at = parsed;
+      } else {
+        found.due_at = null;
+      }
+    }
+    if (patch.kind !== undefined && patch.kind !== null) {
+      const normalizedKind = (patch.kind || 'assignment').toString().toLowerCase();
+      if (normalizedKind !== 'assignment' && normalizedKind !== 'material') throw new BadRequestException('Invalid assignment kind');
+      found.kind = normalizedKind as any;
+    }
+    if (patch.maxPoints !== undefined) {
+      const mp = patch.maxPoints === null ? null : Number(patch.maxPoints || 0);
+      if (mp === null) {
+        found.max_points = 100;
+      } else {
+        if (Number.isNaN(mp)) throw new BadRequestException('Invalid maxPoints');
+        found.max_points = Math.max(1, Math.min(1000, Math.floor(mp)));
+      }
+    }
+
+    return this.assignmentRepo.save(found);
   }
 
   async setResource(assignmentId: number, originalFileName: string, storedFileName: string, mimeType: string, publicUrl: string) {
@@ -124,6 +160,27 @@ export class AssignmentsService {
       sizeBytes: String(file.sizeBytes || 0),
     });
     return this.submissionRepo.save(created);
+  }
+
+  async setSubmissionGrade(submissionId: number, graderEmail: string | null, grade: number | null) {
+    const submission = await this.getSubmissionById(submissionId);
+    if (!submission) throw new NotFoundException('Submission not found');
+
+    const max = Number((submission.assignment as any)?.max_points || 100);
+
+    if (grade === null) {
+      submission.grade = null;
+    } else {
+      const g = Number(grade);
+      if (Number.isNaN(g)) throw new BadRequestException('Invalid grade');
+      if (g < 0 || g > max) throw new BadRequestException(`Grade must be between 0 and ${max}`);
+      submission.grade = Math.floor(g);
+    }
+
+    submission.graded_at = new Date();
+    submission.graded_by = (graderEmail || '').toLowerCase().trim() || null;
+
+    return this.submissionRepo.save(submission);
   }
 
   async listStudentSubmissions(courseId: number, studentEmail: string) {

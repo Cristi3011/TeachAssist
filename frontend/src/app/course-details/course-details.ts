@@ -39,11 +39,12 @@ export class CourseDetails {
   course: any = null;
   editModel = { title: '', description: '' };
   announceModel: { title: string; content: string; resourceUrl?: string } = { title: '', content: '', resourceUrl: '' };
-  assignmentModel: { title: string; description: string; dueDate: string; kind: 'assignment' | 'material' } = {
+  assignmentModel: { title: string; description: string; dueDate: string; kind: 'assignment' | 'material'; maxPoints?: number } = {
     title: '',
     description: '',
     dueDate: '',
     kind: 'assignment',
+    maxPoints: 100,
   };
   
   onAssignmentFileSelected(event: Event) {
@@ -77,11 +78,12 @@ export class CourseDetails {
   editingAnnouncementId: number | null = null;
   editingAnnouncementModel: { title: string; content: string; resourceUrl?: string } = { title: '', content: '', resourceUrl: '' };
   editingAssignmentId: number | null = null;
-  editingAssignmentModel: { title: string; description: string; dueDate: string; kind: 'assignment' | 'material' } = {
+  editingAssignmentModel: { title: string; description: string; dueDate: string; kind: 'assignment' | 'material'; maxPoints?: number } = {
     title: '',
     description: '',
     dueDate: '',
     kind: 'assignment',
+    maxPoints: 100,
   };
   itemMenuOpenForId: string | null = null;
   commentDraftByAnnouncement: Record<number, string> = {};
@@ -142,7 +144,6 @@ export class CourseDetails {
   async createAttendanceSession() {
     if (!this.courseId) return;
     try {
-      // try to find an existing session for the current hour and reuse it
       const hourStart = new Date();
       hourStart.setMinutes(0, 0, 0);
       hourStart.setMilliseconds(0);
@@ -159,7 +160,6 @@ export class CourseDetails {
           if (found) created = found;
         }
       } catch (err) {
-        // ignore listing errors and fall back to creating a session
       }
 
       if (!created) {
@@ -259,7 +259,23 @@ export class CourseDetails {
       const res = await fetch(`/api/courses/${this.courseId}/sessions`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || 'Nu se pot prelua sesiunile');
-      this.attendanceHistory = Array.isArray(data) ? data : [];
+      const sessions = Array.isArray(data) ? data : [];
+
+      const withCounts = await Promise.all(sessions.map(async (s: any) => {
+        try {
+          const aRes = await fetch(`/api/sessions/${s.id}/attendance`);
+          const aData = await aRes.json();
+          if (aRes.ok && Array.isArray(aData)) {
+            s._attendeesCount = aData.length;
+          } else {
+            s._attendeesCount = null;
+          }
+        } catch (e) {
+          s._attendeesCount = null;
+        }
+        return s;
+      }));
+      this.attendanceHistory = withCounts.filter((s: any) => s._attendeesCount === null ? true : (s._attendeesCount > 0));
       this.viewMode = 'list';
       this.selectedSession = null;
       this.showAttendanceHistoryModal = true;
@@ -305,7 +321,6 @@ export class CourseDetails {
       const openData = await openRes.json();
       if (!openRes.ok) throw new Error(openData?.message || 'Nu se poate regenera codul');
 
-      // update token and endTime
       this.generatedAttendanceSession = {
         ...this.generatedAttendanceSession,
         qrToken: openData.token,
@@ -391,7 +406,7 @@ export class CourseDetails {
     this.showCreateMenu = false;
     this.showAssignmentForm = true;
     this.showAnnouncementForm = false;
-    this.assignmentModel = { title: '', description: '', dueDate: '', kind };
+    this.assignmentModel = { title: '', description: '', dueDate: '', kind, maxPoints: 100 };
     this.cdr.markForCheck();
   }
 
@@ -623,7 +638,7 @@ export class CourseDetails {
   toggleAssignmentForm() {
     this.showAssignmentForm = !this.showAssignmentForm;
     if (!this.showAssignmentForm) {
-      this.assignmentModel = { title: '', description: '', dueDate: '', kind: 'assignment' };
+      this.assignmentModel = { title: '', description: '', dueDate: '', kind: 'assignment', maxPoints: 100 };
     }
   }
 
@@ -648,6 +663,7 @@ export class CourseDetails {
           description,
           dueDate: kind === 'assignment' ? dueDate || null : null,
           kind,
+          maxPoints: (this.assignmentModel as any).maxPoints || 100,
         }),
       });
       const data = await res.json();
@@ -710,13 +726,14 @@ export class CourseDetails {
       description: item.description || item.content || '',
       dueDate: item.due_at ? String(item.due_at).slice(0,10) : '',
       kind: item.kind === 'material' ? 'material' : 'assignment',
+      maxPoints: (item as any).max_points || (item as any).maxPoints || 100,
     };
     this.cdr.markForCheck();
   }
 
   cancelEditAssignment() {
     this.editingAssignmentId = null;
-    this.editingAssignmentModel = { title: '', description: '', dueDate: '', kind: 'assignment' };
+    this.editingAssignmentModel = { title: '', description: '', dueDate: '', kind: 'assignment', maxPoints: 100 };
     this.cdr.markForCheck();
   }
 
@@ -728,10 +745,12 @@ export class CourseDetails {
     const kind = this.editingAssignmentModel.kind;
     if (!title || !description) { this.alerts.warning('Completează titlul și conținutul'); return; }
     try {
+      const patchBody: any = { title, description, dueDate: kind === 'assignment' ? (dueDate || null) : null, kind };
+      patchBody.maxPoints = (this.editingAssignmentModel as any).maxPoints || 100;
       const res = await fetch(`/api/assignments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, dueDate: kind === 'assignment' ? (dueDate || null) : null, kind }),
+        body: JSON.stringify(patchBody),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Nu se poate actualiza tema');
@@ -885,6 +904,16 @@ export class CourseDetails {
     const day = date.getDate();
     const month = months[date.getMonth()] || '';
     return `${day} ${month}`; 
+  }
+
+  formatHourInterval(value?: string | Date | null) {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const h = date.getHours();
+    const next = (h + 1) % 24;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(h)}-${pad(next)}`;
   }
 
   trackById(_: number, item: any) {
