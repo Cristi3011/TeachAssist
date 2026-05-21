@@ -35,8 +35,8 @@ export class UserController {
   async listUsers() {
     const users = await this.userService.findAll();
     return users.map((u) => {
-      const { username, email, role } = u as any;
-      return { username, email, role };
+      const { username, email, role, avatarUrl, avatarColor } = u as any;
+      return { username, email, role, avatarUrl, avatarColor };
     });
   }
   
@@ -45,6 +45,22 @@ export class UserController {
     const emailTaken = email ? !!(await this.userService.findByEmail(email)) : false;
     const usernameTaken = username ? !!(await this.userService.findByUsername(username)) : false;
     return { emailTaken, usernameTaken, ok: !(emailTaken || usernameTaken) };
+  }
+  
+  @Post('avatar')
+  async uploadAvatar(@Body() body: { email: string; avatar: string; color?: string | null }) {
+    const updated = await this.userService.updateAvatar(body.email, body.avatar, body.color ?? undefined);
+    if (!updated) return { ok: false, message: 'User not found' };
+    const { username, email, role, avatarUrl } = updated as any;
+    return { ok: true, user: { username, email, role, avatarUrl, avatarColor: (updated as any).avatarColor || null } };
+  }
+
+  @Post('avatar/color')
+  async setAvatarColor(@Body() body: { email: string; color?: string | null }) {
+    const updated = await this.userService.updateAvatarColor(body.email, body.color ?? null);
+    if (!updated) return { ok: false, message: 'User not found' };
+    const { username, email, role, avatarUrl, avatarColor } = updated as any;
+    return { ok: true, user: { username, email, role, avatarUrl, avatarColor: avatarColor || null } };
   }
   
 }

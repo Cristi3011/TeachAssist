@@ -1,9 +1,10 @@
 import { Controller, Post, Body, Get, Query, Patch, Param } from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service';
+import { UserService } from '../users/user.service';
 
 @Controller('enrollments')
 export class EnrollmentsController {
-  constructor(private readonly enrollments: EnrollmentsService) {}
+  constructor(private readonly enrollments: EnrollmentsService, private readonly usersService: UserService) {}
 
   /** POST /enrollments/invite — professor invites a student */
   @Post('invite')
@@ -30,7 +31,12 @@ export class EnrollmentsController {
       courseId: e.course?.id,
       title: e.course?.title,
       description: (e.course as any)?.description,
-      professor: (e.course as any)?.professor?.username || (e.course as any)?.professor?.email,
+      professor: {
+        username: (e.course as any)?.professor?.username || (e.course as any)?.professor?.email,
+        email: (e.course as any)?.professor?.email,
+        avatarUrl: (e.course as any)?.professor?.avatarUrl || null,
+        avatarColor: (e.course as any)?.professor?.avatarColor || null,
+      },
       created_at: e.course?.created_at,
       year: (e as any).year,
       group: (e as any).group,
@@ -46,7 +52,12 @@ export class EnrollmentsController {
       courseId: e.course?.id,
       title: e.course?.title,
       description: (e.course as any)?.description,
-      professor: (e.course as any)?.professor?.username || (e.course as any)?.professor?.email,
+      professor: {
+        username: (e.course as any)?.professor?.username || (e.course as any)?.professor?.email,
+        email: (e.course as any)?.professor?.email,
+        avatarUrl: (e.course as any)?.professor?.avatarUrl || null,
+        avatarColor: (e.course as any)?.professor?.avatarColor || null,
+      },
       enrollmentCreatedAt: e.created_at,
       year: (e as any).year,
       group: (e as any).group,
@@ -56,7 +67,19 @@ export class EnrollmentsController {
   @Get('course')
   async byCourse(@Query('courseId') courseId?: string) {
     const list = await this.enrollments.getByCourse(Number(courseId));
-    return list.map((e) => ({ id: e.id, studentEmail: e.studentEmail, status: e.status, created_at: e.created_at, year: (e as any).year, group: (e as any).group }));
+    const results = await Promise.all(
+      list.map(async (e) => {
+        let avatarUrl: string | null = null;
+        let avatarColor: string | null = null;
+        try {
+          const u = await this.usersService.findByEmail(e.studentEmail || '');
+          avatarUrl = u ? (u as any).avatarUrl || null : null;
+          avatarColor = u ? (u as any).avatarColor || null : null;
+        } catch {}
+        return { id: e.id, studentEmail: e.studentEmail, status: e.status, created_at: e.created_at, year: (e as any).year, group: (e as any).group, avatarUrl, avatarColor };
+      }),
+    );
+    return results;
   }
 
   @Patch(':id/accept')

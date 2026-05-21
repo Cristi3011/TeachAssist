@@ -144,9 +144,27 @@ body{
 	border-color:#bfdbfe;
 }
 
-.user-wrapper{display:flex;align-items:center;gap:10px;color:var(--muted)}
+.user-wrapper{display:flex;align-items:center;gap:10px;color:var(--muted);position:relative}
 .user-wrapper .user-name{display:flex;align-items:center;line-height:1;height:32px}
 .user-wrapper .nav-btn{display:inline-flex;align-items:center;justify-content:center;height:32px;padding:0 12px;line-height:1}
+
+.avatar-button{display:inline-flex}
+
+.user-menu{position:absolute;right:0;top:calc(100% + 8px);background:#fff;border:1px solid #e6e6e6;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.08);z-index:40;min-width:160px;padding:6px 0}
+
+.user-menu__item{padding:10px 16px;background:transparent;border:none;width:100%;text-align:left;cursor:pointer;font-size:14px;white-space:nowrap}
+
+.user-menu__item:hover{background:#f6f6f6}
+
+.user-menu__header{padding:10px 14px 6px 14px;display:flex;flex-direction:column;align-items:flex-start}
+.user-email{font-size:12px;color:var(--muted);margin-bottom:4px}
+.user-greet{font-size:14px;font-weight:600;color:#111827}
+.user-menu__sep{border:none;border-top:1px solid #eef2f5;margin:6px 0}
+
+.user-menu__avatar{display:flex;align-items:center;gap:10px;width:100%}
+.user-menu__actions{display:flex;flex-direction:column}
+.user-menu__change{background:transparent;border:none;color:var(--primary);cursor:pointer;padding:4px 6px;font-size:13px}
+.user-menu__change:hover{text-decoration:underline}
 
 .card{
 	width:100%;

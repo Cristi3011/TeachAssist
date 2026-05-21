@@ -1,0 +1,14 @@
+<div
+  class="avatar"
+  tabindex="0"
+  role="button"
+  (click)="clicked.emit()"
+  (keydown.enter)="clicked.emit()"
+  [style.width.px]="size"
+  [style.height.px]="size"
+  [style.background]="!src ? bgColor : 'transparent'"
+  [attr.aria-label]="name || 'User avatar'"
+>
+  <img *ngIf="src" [src]="src" [alt]="name || 'avatar'" (error)="onImgError()" />
+  <span *ngIf="!src" class="avatar-initial">{{ initial }}</span>
+</div>

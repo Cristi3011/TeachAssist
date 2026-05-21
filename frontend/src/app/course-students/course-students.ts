@@ -1,21 +1,22 @@
-import { ChangeDetectorRef, Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlertService } from '../shared/alert.service';
+import { Avatar } from '../shared/avatar';
 
 @Component({
   selector: 'app-course-students',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, Avatar],
   templateUrl: './course-students.html',
   styleUrls: ['./course-students.scss'],
 })
-export class CourseStudents {
+export class CourseStudents implements OnDestroy {
   courseId = 0;
   loading = false;
   error: string | null = null;
   courseTitle = '';
-  acceptedStudents: Array<{ id: number; username: string; studentEmail: string; created_at: string }> = [];
+  acceptedStudents: Array<{ id: number; username: string; studentEmail: string; created_at: string; avatarUrl: string | null; avatarColor: string | null }> = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -30,7 +31,24 @@ export class CourseStudents {
         return;
       }
       this.loadPage();
+      this.startPolling();
     });
+  }
+
+  private pollId: any = null;
+
+  private startPolling() {
+    this.stopPolling();
+    this.pollId = setInterval(() => {
+      this.loadAcceptedStudents().catch(() => {});
+    }, 10000);
+  }
+
+  private stopPolling() {
+    if (this.pollId) {
+      clearInterval(this.pollId);
+      this.pollId = null;
+    }
   }
 
   async loadPage() {
@@ -70,11 +88,17 @@ export class CourseStudents {
           username,
           studentEmail,
           created_at: (r?.created_at || '').toString(),
+          avatarUrl: (r?.avatarUrl ?? null),
+          avatarColor: (r?.avatarColor ?? null),
         };
       });
   }
 
   trackById(_: number, item: { id: number }) {
     return item.id;
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
   }
 }

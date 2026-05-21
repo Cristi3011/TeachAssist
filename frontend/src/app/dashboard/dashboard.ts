@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlertService } from '../shared/alert.service';
+import { Avatar } from '../shared/avatar';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, Avatar],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss'],
 })

@@ -27,7 +27,16 @@ export class CoursesService {
     const qb = this.courseRepo
       .createQueryBuilder('c')
       .leftJoin('c.professor', 'p')
-      .select(['c.id', 'c.title', 'c.description', 'c.created_at', 'p.email', 'p.username']);
+      .select([
+        'c.id',
+        'c.title',
+        'c.description',
+        'c.created_at',
+        'p.email',
+        'p.username',
+        'p.avatarUrl',
+        'p.avatarColor',
+      ]);
     qb.orderBy('c.created_at', 'DESC');
     if (typeof take === 'number' && take > 0) qb.take(take);
     return qb.getMany();
@@ -41,7 +50,16 @@ export class CoursesService {
     const qb = this.courseRepo
       .createQueryBuilder('c')
       .leftJoin('c.professor', 'p')
-      .select(['c.id', 'c.title', 'c.description', 'c.created_at', 'p.email', 'p.username'])
+      .select([
+        'c.id',
+        'c.title',
+        'c.description',
+        'c.created_at',
+        'p.email',
+        'p.username',
+        'p.avatarUrl',
+        'p.avatarColor',
+      ])
       .where('p.id = :pid', { pid: (prof as any).id })
       .orderBy('c.created_at', 'DESC');
     if (typeof take === 'number' && take > 0) qb.take(take);

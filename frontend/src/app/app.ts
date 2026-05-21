@@ -2,10 +2,11 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AlertService, AppAlertType } from './shared/alert.service';
+import { Avatar } from './shared/avatar';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, CommonModule],
+  imports: [RouterOutlet, RouterLink, CommonModule, Avatar],
   templateUrl: './app.html',
   styleUrls: ['./app.scss']
 })
@@ -13,6 +14,7 @@ export class App {
   protected readonly title = signal('TeachAssist');
   private readonly alertService = inject(AlertService);
   currentUser = signal<any | null>(null);
+  showUserMenu = signal(false);
   alerts = this.alertService.alerts;
 
   isAdmin(): boolean {
@@ -46,6 +48,9 @@ export class App {
       console.log('[App] auth:logout event');
       this.currentUser.set(null);
     });
+
+    // close user menu when clicking outside
+    window.addEventListener('click', () => this.showUserMenu.set(false));
   }
 
   logout() {
@@ -55,12 +60,58 @@ export class App {
     this.router.navigate(['/']);
   }
 
+  toggleUserMenu() {
+    this.showUserMenu.set(!this.showUserMenu());
+  }
+
   dismissAlert(id: number) {
     this.alertService.dismiss(id);
   }
 
   trackAlert(_: number, item: { id: number }) {
     return item.id;
+  }
+
+  async onAvatarSelected(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (!input || !input.files || !input.files.length) return;
+    const file = input.files[0];
+    // basic validation: accept images only, max 2MB
+    if (!file.type.startsWith('image/')) {
+      this.alertService.show('Fișier invalid: alege o imagine', 'warning');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      this.alertService.show('Fișier prea mare: max 2MB', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const data = reader.result as string;
+      try {
+        const res = await fetch('/api/users/avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: this.currentUser()?.email, avatar: data }),
+        });
+        const json = await res.json();
+        if (json?.ok && json?.user) {
+          const user = json.user;
+          // update local UI state; persist only core fields (no avatar) in localStorage
+          const core = { username: user.username, email: user.email, role: user.role };
+          try { localStorage.setItem('teachassist_user', JSON.stringify(core)); } catch {}
+          this.currentUser.set({ ...core, avatarUrl: user.avatarUrl, avatarColor: user.avatarColor || null });
+          this.alertService.show('Imagine de profil actualizată', 'success');
+        } else {
+          this.alertService.show(json?.message || 'Eroare la încărcare', 'error');
+        }
+      } catch (err) {
+        this.alertService.show('Eroare la încărcare', 'error');
+      }
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
   }
 
   private installCustomAlerts() {
@@ -99,6 +150,8 @@ export class App {
         username: found?.username || user?.username || '',
         email,
         role: (found?.role || user?.role || '').toString().toLowerCase(),
+        avatarUrl: found?.avatarUrl || user?.avatarUrl || null,
+        avatarColor: found?.avatarColor || user?.avatarColor || null,
       };
 
       localStorage.setItem('teachassist_user', JSON.stringify(merged));

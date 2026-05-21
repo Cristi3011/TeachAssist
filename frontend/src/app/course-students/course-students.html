@@ -13,9 +13,16 @@
 
       <div class="students-list" *ngIf="acceptedStudents.length > 0; else noAcceptedTpl">
         <article class="student-item" *ngFor="let s of acceptedStudents; trackBy: trackById">
-          <strong>{{ s.username }}</strong>
-          <p>{{ s.studentEmail }}</p>
-          <span>Înscris în: {{ s.created_at | slice:0:10 }}</span>
+          <div class="student-left">
+            <app-avatar [name]="s.username" [src]="s.avatarUrl ?? null" [color]="s.avatarColor ?? null" [size]="44"></app-avatar>
+          </div>
+          <div class="student-main">
+            <strong>{{ s.username }}</strong>
+            <p>{{ s.studentEmail }}</p>
+          </div>
+          <div class="student-right">
+            <span>Înscris în: {{ s.created_at | slice:0:10 }}</span>
+          </div>
         </article>
       </div>
 

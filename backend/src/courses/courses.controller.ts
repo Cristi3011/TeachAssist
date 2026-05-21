@@ -8,21 +8,55 @@ export class CoursesController {
   @Post()
   async create(@Body() body: { title: string; description?: string; professorEmail: string }) {
     const saved = await this.courses.create(body.title, body.description || '', body.professorEmail);
-    return { message: 'Course created', course: { id: saved.id, title: saved.title, professor: saved.professor?.username || saved.professor?.email } };
+    return {
+      message: 'Course created',
+      course: {
+        id: saved.id,
+        title: saved.title,
+        professor: {
+          username: saved.professor?.username || saved.professor?.email,
+          email: saved.professor?.email,
+          avatarUrl: (saved.professor as any)?.avatarUrl || null,
+          avatarColor: (saved.professor as any)?.avatarColor || null,
+        },
+      },
+    };
   }
 
   @Get()
   async listAll(@Query('limit') limit?: string) {
     const take = limit ? Number(limit) : undefined;
     const all = await this.courses.listAll(take);
-    return all.map((c) => ({ id: c.id, title: c.title, description: c.description, professor: c.professor?.username || c.professor?.email, created_at: c.created_at }));
+    return all.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      professor: {
+        username: c.professor?.username || c.professor?.email,
+        email: (c.professor as any)?.email,
+        avatarUrl: (c.professor as any)?.avatarUrl || null,
+        avatarColor: (c.professor as any)?.avatarColor || null,
+      },
+      created_at: c.created_at,
+    }));
   }
 
   @Get('by')
   async listBy(@Query('professorEmail') professorEmail?: string, @Query('limit') limit?: string) {
     const take = limit ? Number(limit) : undefined;
     const list = await this.courses.listByProfessorEmail(professorEmail || '', take);
-    return list.map((c) => ({ id: c.id, title: c.title, description: c.description, professor: c.professor?.username || c.professor?.email, created_at: c.created_at }));
+    return list.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      professor: {
+        username: c.professor?.username || c.professor?.email,
+        email: (c.professor as any)?.email,
+        avatarUrl: (c.professor as any)?.avatarUrl || null,
+        avatarColor: (c.professor as any)?.avatarColor || null,
+      },
+      created_at: c.created_at,
+    }));
   }
 
   @Get(':id')
@@ -33,7 +67,12 @@ export class CoursesController {
       id: course.id,
       title: course.title,
       description: course.description,
-      professor: course.professor?.username || course.professor?.email,
+      professor: {
+        username: course.professor?.username || course.professor?.email,
+        email: (course.professor as any)?.email,
+        avatarUrl: (course.professor as any)?.avatarUrl || null,
+        avatarColor: (course.professor as any)?.avatarColor || null,
+      },
       created_at: course.created_at,
     };
   }
@@ -47,7 +86,12 @@ export class CoursesController {
         id: saved.id,
         title: saved.title,
         description: saved.description,
-        professor: saved.professor?.username || saved.professor?.email,
+        professor: {
+          username: saved.professor?.username || saved.professor?.email,
+          email: (saved.professor as any)?.email,
+          avatarUrl: (saved.professor as any)?.avatarUrl || null,
+          avatarColor: (saved.professor as any)?.avatarColor || null,
+        },
       },
     };
   }

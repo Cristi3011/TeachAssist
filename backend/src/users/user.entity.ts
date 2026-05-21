@@ -21,6 +21,12 @@ export class User {
   @CreateDateColumn()
   created_at: Date;
 
+  @Column({ type: 'text', name: 'avatar_url', nullable: true })
+  avatarUrl?: string;
+
+  @Column({ type: 'varchar', name: 'avatar_color', length: 24, nullable: true })
+  avatarColor?: string | null;
+
   @OneToMany(() => Course, (c) => (c as any).professor)
   courses?: Course[];
 }

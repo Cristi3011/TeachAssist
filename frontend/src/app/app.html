@@ -9,8 +9,24 @@
     <ng-container *ngIf="currentUser()">
       <div class="user-wrapper">
         <button *ngIf="isAdmin()" class="nav-btn nav-btn--secondary" [routerLink]="['/admin']">Administrare</button>
-        <span class="user-name">{{ currentUser()?.username }}</span>
-        <button class="nav-btn" (click)="logout()">Ieși din cont</button>
+        <span class="avatar-button" (click)="$event.stopPropagation(); toggleUserMenu()">
+          <app-avatar [name]="currentUser()?.username" [src]="currentUser()?.avatarUrl" [color]="currentUser()?.avatarColor ?? null" [size]="36"></app-avatar>
+        </span>
+        <div class="user-menu" *ngIf="showUserMenu()" (click)="$event.stopPropagation()">
+          <div class="user-menu__header">
+            <div class="user-email">{{ currentUser()?.email }}</div>
+            <div class="user-menu__avatar">
+              <app-avatar [name]="currentUser()?.username" [src]="currentUser()?.avatarUrl" [color]="currentUser()?.avatarColor ?? null" [size]="56"></app-avatar>
+              <div class="user-menu__actions">
+                <input #avatarInput type="file" accept="image/*" hidden (change)="onAvatarSelected($event)" />
+                <button class="user-menu__change" (click)="avatarInput.click()">Schimbă imaginea</button>
+              </div>
+            </div>
+            <div class="user-greet">Salut,{{ currentUser()?.username }}!</div>
+          </div>
+          <hr class="user-menu__sep" />
+          <button class="user-menu__item" (click)="logout()">Deconectează-te</button>
+        </div>
       </div>
     </ng-container>
   </div>

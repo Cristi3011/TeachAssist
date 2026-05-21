@@ -41,6 +41,21 @@ export class UserService {
     return this.usersRepository.find();
   }
 
+  async updateAvatar(email: string, avatarData: string, color?: string | null) {
+    const user = await this.findByEmail(email);
+    if (!user) return null;
+    user.avatarUrl = avatarData;
+    if (typeof color === 'string') user.avatarColor = color || null;
+    return this.usersRepository.save(user);
+  }
+
+  async updateAvatarColor(email: string, color: string | null) {
+    const user = await this.findByEmail(email);
+    if (!user) return null;
+    user.avatarColor = color;
+    return this.usersRepository.save(user);
+  }
+
   async validateUser(email: string, password: string) {
     console.log('[UserService] validateUser called for email:', email);
     const user = await this.findByEmail(email);
