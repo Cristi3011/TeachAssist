@@ -258,6 +258,40 @@
     cursor: pointer;
   }
 
+  .course-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .prof-avatar-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  app-avatar.prof-avatar-small .avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 9999px;
+    box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+    border: 2px solid #ffffff;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(0,0,0,0.03), rgba(255,255,255,0.02));
+  }
+
+  app-avatar.prof-avatar-small:hover .avatar {
+    transform: scale(1.06);
+    box-shadow: 0 10px 28px rgba(15,23,42,0.12);
+    border-color: rgba(15,23,42,0.06);
+  }
+
+  .prof-text .prof-name { font-size: 13px; font-weight: 600; color: #0f172a; }
+  .prof-text .prof-email { font-size: 12px; color: var(--muted); }
+
   .course-title {
     font-size: 15px;
     font-weight: 600;

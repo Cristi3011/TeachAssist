@@ -45,6 +45,7 @@
             <div class="course-meta">
               <span>{{ c.created_at | slice:0:10 }}</span>
             </div>
+            <!-- professor avatar intentionally not shown in professor's own dashboard -->
           </div>
           <div class="course-actions">
             <a class="btn-open" [routerLink]="['/dashboard/course', c.id]" (click)="$event.stopPropagation()">Deschide</a>
@@ -75,7 +76,7 @@
               <div class="invitation-info">
                 <strong>{{ inv.title }}</strong>
                 <span *ngIf="inv.description" class="inv-desc">{{ inv.description }}</span>
-                <span class="inv-meta">Profesor: {{ inv.professor }}</span>
+                <span class="inv-meta">Profesor: {{ (inv.professor && (inv.professor.username || inv.professor)) || '' }}</span>
               </div>
               <div class="invitation-actions">
                 <button class="btn-accept" (click)="acceptInvitation(inv.id)">Acceptă</button>
@@ -99,7 +100,16 @@
             <div class="course-title">{{ c.title }}</div>
             <p *ngIf="c.description" class="course-description">{{ c.description }}</p>
             <div class="course-meta">
-              <span>Profesor: {{ c.professor }}</span>
+              <span>{{ c.created_at | slice:0:10 }}</span>
+            </div>
+            <div class="course-footer">
+              <div class="prof-avatar-wrapper">
+                <app-avatar class="prof-avatar-small" [name]="c.professor?.username" [src]="c.professor?.avatarUrl ?? null" [color]="c.professor?.avatarColor ?? null" [size]="32"></app-avatar>
+              </div>
+              <div class="prof-text">
+                <div class="prof-name">{{ c.professor?.username }}</div>
+                <div class="prof-email muted">{{ c.professor?.email }}</div>
+              </div>
             </div>
           </div>
           <div class="course-actions">
