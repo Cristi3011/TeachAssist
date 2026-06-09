@@ -21,6 +21,7 @@
             </div>
             <div class="material-file-right">
               <a *ngIf="(assignment.resource_url || assignment.resourceUrl)" [href]="(assignment.resource_url || assignment.resourceUrl)" target="_blank" rel="noopener" class="material-link">Vizualizează material</a>
+              <a *ngIf="!(assignment.resource_url || assignment.resourceUrl)" [href]="'/api/assignments/' + assignment.id + '/resource'" target="_blank" rel="noopener" class="material-link">Vizualizează material</a>
             </div>
           </div>
         </div>
@@ -55,13 +56,13 @@
         </div>
 
         <p class="muted-copy" *ngIf="selectedFile">Selectat: {{ selectedFile.name }}</p>
-        <p class="muted-copy submission-right" *ngIf="mySubmission">
+          <p class="muted-copy submission-right" *ngIf="mySubmission">
           Tema ta: {{ mySubmission.originalFileName }}
           ({{ formatShortDate(mySubmission.created_at) }})
           -
-          <a [href]="'http://localhost:3000/assignments/submissions/' + mySubmission.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+          <a [href]="'/api/assignments/submissions/' + mySubmission.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
           &nbsp;·&nbsp;
-          <a [href]="'http://localhost:3000/assignments/submissions/' + mySubmission.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
+          <a [href]="'/api/assignments/submissions/' + mySubmission.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
           <span *ngIf="mySubmission.grade !== undefined && mySubmission.grade !== null" style="margin-left:12px; color:#0b6; font-weight:700;">Nota: {{ mySubmission.grade }}</span>
           <span *ngIf="mySubmission.grade === null || mySubmission.grade === undefined" style="margin-left:12px; color:#6b7280;">(fără notă)</span>
         </p>
@@ -83,9 +84,9 @@
                 </div>
                   <div class="submission-right">
                     <div class="muted-copy">{{ formatShortDate(s.created_at) }}</div>
-                    <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+                    <a [href]="'/api/assignments/submissions/' + s.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
                     &nbsp;·&nbsp;
-                    <a [href]="'http://localhost:3000/assignments/submissions/' + s.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
+                    <a [href]="'/api/assignments/submissions/' + s.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
                     &nbsp;·&nbsp;
                     <label class="grade-controls" style="margin-left:8px; display:inline-flex; align-items:center; gap:8px;">
                       <input class="grade-input" type="number" [(ngModel)]="gradeDrafts[s.id]" [min]="0" [max]="assignment?.max_points || assignment?.maxPoints || 100" />

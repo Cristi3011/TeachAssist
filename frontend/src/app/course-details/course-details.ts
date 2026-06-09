@@ -654,9 +654,13 @@ export class CourseDetails {
     }
 
     try {
+      const token = localStorage.getItem('teachassist_token');
+      const headers: any = { 'Content-Type': 'application/json' };
+      console.debug('createAssignment -> teachassist_token present?', !!token);
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch('/api/assignments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           courseId: this.courseId,
           title,
@@ -666,30 +670,54 @@ export class CourseDetails {
           maxPoints: (this.assignmentModel as any).maxPoints || 100,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Nu se poate crea tema');
+      const dataText = await res.text();
+      let data: any = null;
+      try { data = dataText ? JSON.parse(dataText) : null; } catch { data = dataText; }
+      if (!res.ok) {
+        console.debug('createAssignment -> POST /api/assignments failed', { status: res.status, body: data });
+        throw new Error((data && data.message) || 'Nu se poate crea tema');
+      }
       const created = data?.assignment || data;
       try { console.debug('createAssignment -> created', created); } catch {}
 
       if (kind === 'material' && (this.assignmentModel as any).resourceFile && created?.id) {
         try {
-          const form = new FormData();
-          form.append('file', (this.assignmentModel as any).resourceFile);
-          const backendBase = `http://localhost:3000`;
-          const uploadUrl = `${backendBase}/assignments/${created.id}/resource`;
-          const upRes = await fetch(uploadUrl, {
+          const file: File = (this.assignmentModel as any).resourceFile;
+          const token = localStorage.getItem('teachassist_token');
+          const authHeaders: any = {};
+          if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+
+          const presignRes = await fetch(`/api/assignments/${created.id}/resource/presign`, {
             method: 'POST',
-            body: form,
+            headers: { ...authHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: file.name, contentType: file.type }),
           });
-          const upText = await upRes.text();
-          const upData = upText ? JSON.parse(upText) : null;
-          if (!upRes.ok) {
-            console.warn('Failed to upload material', upData?.message || upData);
-            this.alerts.warning('Materialul nu a putut fi încărcat pe server');
+          const presignText = await presignRes.text();
+          const presignData = presignText ? JSON.parse(presignText) : null;
+          if (!presignRes.ok || !presignData?.url || !presignData?.key) throw new Error((presignData && presignData.message) || 'Nu s-a putut genera link-ul de upload');
+
+          const uploadHeaders: any = { 'Content-Type': file.type || 'application/octet-stream' };
+          if (presignData.url && presignData.url.toString().includes('X-Amz-Content-Sha256=UNSIGNED-PAYLOAD')) {
+            uploadHeaders['x-amz-content-sha256'] = 'UNSIGNED-PAYLOAD';
           }
+          const uploadRes = await fetch(presignData.url, {
+            method: 'PUT',
+            body: file,
+            headers: uploadHeaders,
+          });
+          if (!uploadRes.ok) throw new Error('Eroare la upload-ul fișierului');
+
+          const confirmRes = await fetch(`/api/assignments/${created.id}/resource/confirm`, {
+            method: 'POST',
+            headers: { ...authHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: presignData.key, originalName: file.name, contentType: file.type }),
+          });
+          const confirmText = await confirmRes.text();
+          const confirmData = confirmText ? JSON.parse(confirmText) : null;
+          if (!confirmRes.ok) throw new Error((confirmData && confirmData.message) || 'Nu s-a putut confirma resource');
         } catch (err: any) {
           console.warn('Material upload failed', err?.message || err);
-          this.alerts.warning('Eroare la upload material: ' + (err?.message || 'network'));
+          this.alerts.warning('Materialul nu a putut fi încărcat pe server');
         }
       }
 
@@ -708,7 +736,10 @@ export class CourseDetails {
     const isMaterial = item?.kind === 'material';
     if (!confirm(isMaterial ? 'Stergi acest material?' : 'Stergi aceasta tema?')) return;
     try {
-      const res = await fetch(`/api/assignments/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('teachassist_token');
+      const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/assignments/${id}`, { method: 'DELETE', headers });
       const data = await res.json();
       if (!res.ok || !data.removed) throw new Error(data.message || (isMaterial ? 'Nu se poate sterge materialul' : 'Nu se poate sterge tema'));
       await this.loadAssignments();
@@ -747,9 +778,12 @@ export class CourseDetails {
     try {
       const patchBody: any = { title, description, dueDate: kind === 'assignment' ? (dueDate || null) : null, kind };
       patchBody.maxPoints = (this.editingAssignmentModel as any).maxPoints || 100;
+      const token = localStorage.getItem('teachassist_token');
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`/api/assignments/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(patchBody),
       });
       const data = await res.json();

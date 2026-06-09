@@ -56,6 +56,14 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
+  async deleteByEmail(email: string) {
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    if (!normalizedEmail) return false;
+    const result = await this.usersRepository.delete({ email: normalizedEmail });
+    // TypeORM DeleteResult has 'affected'
+    return (result as any)?.affected ? true : false;
+  }
+
   async validateUser(email: string, password: string) {
     console.log('[UserService] validateUser called for email:', email);
     const user = await this.findByEmail(email);

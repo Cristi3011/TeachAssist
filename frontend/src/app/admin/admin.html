@@ -66,6 +66,8 @@
               <div class="users-email">{{ user.email }}</div>
             </div>
             <span class="role-chip">{{ user.role || 'necunoscut' }}</span>
+            <button *ngIf="user.email !== username" class="user-delete" (click)="removeUser(user.email)">Sterge</button>
+            <button *ngIf="user.email === username" class="user-delete" disabled title="Nu poți șterge propriul cont">Sterge</button>
           </li>
         </ul>
       </article>

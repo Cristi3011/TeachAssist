@@ -91,7 +91,10 @@ export class AssignmentDetails {
   }
 
   async loadAllSubmissions() {
-    const res = await fetch(`/api/assignments/${this.assignmentId}/submissions`);
+    const token = localStorage.getItem('teachassist_token');
+    const headers: any = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`/api/assignments/${this.assignmentId}/submissions`, { headers });
     const text = await res.text();
     const data = text ? JSON.parse(text) : null;
     if (!res.ok) throw new Error((data && data.message) || 'Nu se pot incarca predarile');
@@ -108,9 +111,12 @@ export class AssignmentDetails {
   async gradeSubmission(submissionId: number) {
     const draft = this.gradeDrafts[submissionId];
     try {
+      const token = localStorage.getItem('teachassist_token');
+      const headers: any = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const res = await fetch(`/api/assignments/submissions/${submissionId}/grade`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ graderEmail: this.userEmail, grade: draft }),
       });
       const text = await res.text();
@@ -193,19 +199,43 @@ export class AssignmentDetails {
 
     this.submitInProgress = true;
     try {
-      const form = new FormData();
-      form.append('studentEmail', this.userEmail);
-      form.append('file', this.selectedFile);
+      const token = localStorage.getItem('teachassist_token');
+      const authHeaders: any = {};
+      if (token) authHeaders['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch(`/api/assignments/${this.assignmentId}/submissions`, {
+      // 1) request presigned PUT URL from backend
+      const presignRes = await fetch(`/api/assignments/${this.assignmentId}/submissions/presign`, {
         method: 'POST',
-        body: form,
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: this.selectedFile.name, contentType: this.selectedFile.type }),
       });
-      const text = await res.text();
-      const data = text ? JSON.parse(text) : null;
-      if (!res.ok) throw new Error((data && data.message) || 'Nu se poate trimite fisierul');
+      const presignText = await presignRes.text();
+      const presignData = presignText ? JSON.parse(presignText) : null;
+      if (!presignRes.ok || !presignData?.url || !presignData?.key) throw new Error((presignData && presignData.message) || 'Nu s-a putut genera link-ul de upload');
 
-      this.mySubmission = (data && data.submission) ? data.submission : null;
+      // 2) upload file directly to S3 (no auth header)
+      const uploadHeaders: any = { 'Content-Type': this.selectedFile.type || 'application/octet-stream' };
+      if (presignData.url && presignData.url.toString().includes('X-Amz-Content-Sha256=UNSIGNED-PAYLOAD')) {
+        uploadHeaders['x-amz-content-sha256'] = 'UNSIGNED-PAYLOAD';
+      }
+      const uploadRes = await fetch(presignData.url, {
+        method: 'PUT',
+        body: this.selectedFile,
+        headers: uploadHeaders,
+      });
+      if (!uploadRes.ok) throw new Error('Eroare la upload-ul fișierului');
+
+      // 3) confirm submission metadata to backend (store only metadata)
+      const submitRes = await fetch(`/api/assignments/${this.assignmentId}/submissions`, {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentEmail: this.userEmail, key: presignData.key, originalFileName: this.selectedFile.name, mimeType: this.selectedFile.type, sizeBytes: this.selectedFile.size }),
+      });
+      const submitText = await submitRes.text();
+      const submitData = submitText ? JSON.parse(submitText) : null;
+      if (!submitRes.ok) throw new Error((submitData && submitData.message) || 'Nu s-a putut confirma predarea');
+
+      this.mySubmission = (submitData && submitData.submission) ? submitData.submission : null;
       this.selectedFile = null;
       this.alerts.success('Fisier trimis cu succes');
     } catch (err: any) {

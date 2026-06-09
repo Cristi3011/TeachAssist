@@ -15,7 +15,7 @@
             <h1>{{ course.title }}</h1>
             <p class="hero-description">{{ course.description || 'Fără descriere momentan.' }}</p>
             <div class="hero-meta">
-              <span>Profesor: {{ course.professor }}</span>
+              <span>Profesor: {{ course.professor?.username || course.professor?.email || 'necunoscut' }}</span>
               <span>Creat: {{ formatShortDate(course.created_at) }}</span>
             </div>
 

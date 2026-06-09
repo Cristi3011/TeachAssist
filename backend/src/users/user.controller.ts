@@ -1,10 +1,15 @@
-import { Controller, Post, Body, Get, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, ForbiddenException, Delete } from '@nestjs/common';
 import { UserService } from './user.service';
 import { InvitationsService } from '../invitations/invitations.service';
+import { AuthService } from '../auth/auth.service';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService, private readonly invites: InvitationsService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly invites: InvitationsService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Post('register')
   async register(
@@ -28,7 +33,8 @@ export class UserController {
     const user = await this.userService.validateUser(body.email, body.password);
     if (!user) return { message: 'Invalid credentials' };
     const { username, email, role } = user as any;
-    return { message: 'Login successful', user: { username, email, role } };
+    const token = this.authService.login(user);
+    return { message: 'Login successful', user: { username, email, role }, token };
   }
 
   @Get()
@@ -38,6 +44,19 @@ export class UserController {
       const { username, email, role, avatarUrl, avatarColor } = u as any;
       return { username, email, role, avatarUrl, avatarColor };
     });
+  }
+
+  @Delete()
+  async deleteUser(@Query('email') qEmail?: string, @Body() body?: { email?: string }) {
+    const email = (qEmail || body?.email || '').toString().toLowerCase().trim();
+    if (!email) return { ok: false, message: 'Email missing' };
+    try {
+      const deleted = await this.userService.deleteByEmail(email);
+      if (!deleted) return { ok: false, message: 'User not found' };
+      return { ok: true, removed: true };
+    } catch (err) {
+      return { ok: false, message: (err as any)?.message || 'Could not delete user' };
+    }
   }
   
   @Get('check')

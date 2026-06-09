@@ -9,9 +9,16 @@
                 <input id="username" name="username" type="text" [(ngModel)]="model.username" required />
             </div>
 
-            <div class="form-field">
+            <div class="form-field" style="position:relative">
                 <label for="email">Email</label>
-                <input id="email" name="email" type="email" [(ngModel)]="model.email" required />
+                <input id="email" name="email" type="email" [(ngModel)]="model.email" (ngModelChange)="onEmailChange($event)" required />
+                <div style="position:absolute; right:8px; top:34px; transform:translateY(-50%);">
+                    <ng-container>
+                        <span *ngIf="inviteStatus === 'checking'" style="color:var(--muted);">...verific</span>
+                        <span *ngIf="inviteStatus === 'yes'" style="color:green">✓ <small *ngIf="inviteRole">({{ inviteRole }})</small></span>
+                        <span *ngIf="inviteStatus === 'no'" style="color:red">✕</span>
+                    </ng-container>
+                </div>
             </div>
 
             <div class="form-field">

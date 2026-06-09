@@ -60,6 +60,9 @@ export class Login {
       try {
         const safe = { username: data.user?.username, email: data.user?.email, role: data.user?.role };
         localStorage.setItem('teachassist_user', JSON.stringify(safe));
+        if (data.token && data.token.accessToken) {
+          localStorage.setItem('teachassist_token', data.token.accessToken);
+        }
         window.dispatchEvent(new CustomEvent('auth:login', { detail: safe }));
       } catch {}
 

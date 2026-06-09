@@ -105,7 +105,7 @@ export class Admin {
         id: Number(c?.id || 0),
         title: (c?.title || '').toString(),
         description: (c?.description || '').toString(),
-        professor: (c?.professor || '').toString(),
+        professor: (c?.professor?.username || c?.professor?.email || '').toString(),
       }));
     } catch (err) {
       this.coursesError = this.getErrorMessage(err, 'Eroare la incarcarea cursurilor.');
@@ -167,6 +167,32 @@ export class Admin {
     } catch (err) {
       this.invitationActionError = this.getErrorMessage(err, 'Eroare la stergere invitatie.');
       this.alerts.error(this.invitationActionError);
+      this.requestRender();
+    }
+  }
+
+  async removeUser(email: string) {
+    if (!email) return;
+    if (email === this.username) {
+      this.alerts.warning('Nu poți șterge propriul cont.');
+      return;
+    }
+    const confirmed = confirm(`Stergi utilizatorul ${email}?`);
+    if (!confirmed) return;
+
+    try {
+      let res: any = null;
+      try {
+        res = await firstValueFrom(this.http.delete<any>(`/api/users?email=${encodeURIComponent(email)}`));
+      } catch (e) {
+        res = await firstValueFrom(this.http.delete<any>('/api/users', { body: { email } }));
+      }
+      if (!res?.ok && res?.message) throw new Error(res.message || 'Could not delete user');
+      await this.loadUsers();
+      this.alerts.success('Utilizatorul a fost sters.');
+    } catch (err) {
+      const msg = this.getErrorMessage(err, 'Eroare la stergerea utilizatorului.');
+      this.alerts.error(msg);
       this.requestRender();
     }
   }

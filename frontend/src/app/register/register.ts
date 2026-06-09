@@ -13,6 +13,9 @@ import { AlertService } from '../shared/alert.service';
 })
 export class Register {
   model = { username: '', email: '', password: '', role: 'student' };
+  inviteStatus: 'unknown' | 'checking' | 'yes' | 'no' = 'unknown';
+  inviteRole: string | null = null;
+  private emailCheckTimer: any = null;
 
   constructor(private router: Router, private alerts: AlertService) {
     // redirect away from register when already logged in
@@ -45,6 +48,32 @@ export class Register {
     if (!emailOk) return false;
     if (p.length < 6) return false;
     return true;
+  }
+
+  onEmailChange(value: string) {
+    this.model.email = (value || '').toString().trim();
+    this.inviteStatus = 'unknown';
+    if (this.emailCheckTimer) clearTimeout(this.emailCheckTimer);
+    const email = this.model.email;
+    if (!email) return;
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) return;
+
+    this.inviteStatus = 'checking';
+    this.emailCheckTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/invitations/check?email=${encodeURIComponent(email)}`);
+        if (!res.ok) {
+          this.inviteStatus = 'unknown';
+          return;
+        }
+        const data = await res.json();
+        this.inviteStatus = data?.invited ? 'yes' : 'no';
+        this.inviteRole = data?.role || null;
+      } catch (err) {
+        this.inviteStatus = 'unknown';
+      }
+    }, 500);
   }
 
   async submit() {

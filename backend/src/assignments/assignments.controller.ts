@@ -12,6 +12,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { AssignmentsService } from './assignments.service';
 import { UserService } from '../users/user.service';
@@ -20,10 +21,16 @@ import { memoryStorage } from 'multer';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Response } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { StorageService } from '../storage/storage.service';
 
 @Controller('assignments')
 export class AssignmentsController {
-  constructor(private readonly assignments: AssignmentsService, private readonly usersService: UserService) {}
+  constructor(
+    private readonly assignments: AssignmentsService,
+    private readonly usersService: UserService,
+    private readonly storageService: StorageService,
+  ) {}
 
   private readonly uploadsDir = join(process.cwd(), 'uploads', 'submissions');
 
@@ -34,6 +41,7 @@ export class AssignmentsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   async create(
     @Body()
     body: {
@@ -142,62 +150,42 @@ export class AssignmentsController {
     };
   }
 
-  @Post(':id/resource')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  async uploadResource(
-    @Param('id') id: string,
-    @UploadedFile() file: any,
-  ) {
-    if (!file) throw new BadRequestException('File required');
+  @Post(':id/resource/presign')
+  @UseGuards(JwtAuthGuard)
+  async presignResource(@Param('id') id: string, @Body() body: { filename: string; contentType: string }) {
+    if (!body || !body.filename) throw new BadRequestException('filename required');
+    const safe = body.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const key = `materials/${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safe}`;
+    const url = await this.storageService.getPresignedPutUrl(key, body.contentType || 'application/octet-stream');
+    return { url, key };
+  }
 
-    const maxSizeBytes = 15 * 1024 * 1024;
-    if ((file.size || 0) > maxSizeBytes) {
-      throw new BadRequestException('Fisier prea mare (max 15MB)');
-    }
-
-    const originalName = (file.originalname || 'material').toString();
-    const safeOriginalBase = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storedFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safeOriginalBase}`;
-    const matDir = join(process.cwd(), 'uploads', 'materials');
-    if (!existsSync(matDir)) mkdirSync(matDir, { recursive: true });
-    const destination = join(matDir, storedFileName);
-    try {
-      writeFileSync(destination, file.buffer);
-
-      const publicUrl = `/api/assignments/${id}/resource`;
-
-      const saved = await this.assignments.setResource(Number(id), originalName, storedFileName, (file.mimetype || 'application/octet-stream').toString(), publicUrl);
-
-      return {
-        message: 'Resource uploaded',
-        resource: {
-          resource_url: saved.resource_url,
-          resource_original_name: saved.resource_original_name,
-          resource_mime: saved.resource_mime,
-        },
-      };
-    } catch (err: any) {
-      console.error('Failed to save uploaded resource file', err);
-      throw new BadRequestException('Failed to save uploaded resource file: ' + (err?.message || 'unknown'));
-    }
+  @Post(':id/resource/confirm')
+  @UseGuards(JwtAuthGuard)
+  async confirmResource(@Param('id') id: string, @Body() body: { key: string; originalName: string; contentType?: string }) {
+    if (!body || !body.key || !body.originalName) throw new BadRequestException('key and originalName required');
+    const publicUrl = ''; // we don't store public URL; serve via presigned GET when needed
+    const saved = await this.assignments.setResource(Number(id), body.originalName, body.key, body.contentType || 'application/octet-stream', publicUrl);
+    return {
+      message: 'Resource metadata saved',
+      resource: {
+        resource_url: saved.resource_url,
+        resource_original_name: saved.resource_original_name,
+        resource_mime: saved.resource_mime,
+      },
+    };
   }
 
   @Get(':id/resource')
   async serveResource(@Param('id') id: string, @Res() res: Response) {
     const assignment = await this.assignments.getById(Number(id));
     if (!assignment) throw new NotFoundException('Assignment not found');
-    const matDir = join(process.cwd(), 'uploads', 'materials');
     const storedFile = (assignment as any).resource_stored_name || null;
     if (!storedFile) {
       throw new NotFoundException('Resource file not found');
     }
-    const filePath = join(matDir, storedFile);
-    if (!existsSync(filePath)) throw new NotFoundException('Resource file not found');
-
-    const contentType = (assignment as any).resource_mime || 'application/octet-stream';
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${((assignment as any).resource_original_name || 'file').replace(/"/g, '')}"`);
-    return res.sendFile(filePath);
+    const url = await this.storageService.getPresignedGetUrl(storedFile);
+    return res.redirect(url);
   }
 
   @Get('submissions/mine')
@@ -317,19 +305,23 @@ export class AssignmentsController {
     };
   }
 
+  @Post(':id/submissions/presign')
+  @UseGuards(JwtAuthGuard)
+  async presignSubmission(@Param('id') id: string, @Body() body: { filename: string; contentType: string }) {
+    if (!body || !body.filename) throw new BadRequestException('filename required');
+    const safe = body.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const key = `submissions/${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safe}`;
+    const url = await this.storageService.getPresignedPutUrl(key, body.contentType || 'application/octet-stream');
+    return { url, key };
+  }
+
   @Post(':id/submissions')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  @UseGuards(JwtAuthGuard)
   async submit(
     @Param('id') id: string,
-    @Body() body: { studentEmail: string },
-    @UploadedFile() file: any,
+    @Body() body: { studentEmail: string; key: string; originalFileName: string; mimeType?: string; sizeBytes?: number },
   ) {
-    if (!file) throw new BadRequestException('File required');
-
-    const maxSizeBytes = 15 * 1024 * 1024;
-    if ((file.size || 0) > maxSizeBytes) {
-      throw new BadRequestException('Fisier prea mare (max 15MB)');
-    }
+    if (!body || !body.key) throw new BadRequestException('key required');
 
     const allowedMime = new Set([
       'application/pdf',
@@ -342,26 +334,20 @@ export class AssignmentsController {
       'application/vnd.ms-powerpoint',
     ]);
 
-    const originalName = (file.originalname || 'submission').toString();
+    const originalName = (body.originalFileName || 'submission').toString();
     const extension = (originalName.includes('.') ? originalName.split('.').pop() : 'bin') || 'bin';
     const normalizedExt = extension.toLowerCase();
     const allowedExt = new Set(['pdf', 'doc', 'docx', 'txt', 'zip', 'ppt', 'pptx']);
 
-    if (!allowedMime.has((file.mimetype || '').toString()) && !allowedExt.has(normalizedExt)) {
+    if (!allowedMime.has((body.mimeType || '').toString()) && !allowedExt.has(normalizedExt)) {
       throw new BadRequestException('Tip fisier neacceptat. Acceptat: PDF, DOC, DOCX, TXT, ZIP, PPT, PPTX');
     }
 
-    this.ensureUploadsDir();
-    const safeOriginalBase = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storedFileName = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${safeOriginalBase}`;
-    const destination = join(this.uploadsDir, storedFileName);
-    writeFileSync(destination, file.buffer);
-
     const saved = await this.assignments.saveSubmission(Number(id), body.studentEmail, {
       originalFileName: originalName,
-      storedFileName,
-      mimeType: (file.mimetype || 'application/octet-stream').toString(),
-      sizeBytes: Number(file.size || 0),
+      storedFileName: body.key,
+      mimeType: (body.mimeType || 'application/octet-stream').toString(),
+      sizeBytes: Number(body.sizeBytes || 0),
     });
 
     return {
@@ -381,6 +367,7 @@ export class AssignmentsController {
   }
 
   @Patch('submissions/:submissionId/grade')
+  @UseGuards(JwtAuthGuard)
   async gradeSubmission(@Param('submissionId') submissionId: string, @Body() body: { graderEmail?: string | null; grade?: number | null }) {
     const saved = await this.assignments.setSubmissionGrade(Number(submissionId), body.graderEmail || null, body.grade === undefined ? null : body.grade);
 
@@ -401,19 +388,14 @@ export class AssignmentsController {
   async download(@Param('submissionId') submissionId: string, @Res() res: Response) {
     const submission = await this.assignments.getSubmissionById(Number(submissionId));
     if (!submission) throw new NotFoundException('Submission not found');
-
-    const filePath = join(this.uploadsDir, submission.storedFileName);
-    if (!existsSync(filePath)) throw new NotFoundException('Fisierul nu mai exista pe server');
-
-    const contentType = submission.mimeType || 'application/octet-stream';
-    const disposition = 'inline';
-    res.setHeader('Content-Type', contentType);
-
-    res.setHeader('Content-Disposition', `${disposition}; filename="${(submission.originalFileName || 'file').replace(/\"/g, '')}"`);
-    return res.sendFile(filePath);
+    const key = submission.storedFileName;
+    if (!key) throw new NotFoundException('Fisierul nu mai exista');
+    const url = await this.storageService.getPresignedGetUrl(key);
+    return res.redirect(url);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   async remove(@Param('id') id: string) {
     const removed = await this.assignments.remove(Number(id));
     return { removed };

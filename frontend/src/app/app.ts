@@ -90,9 +90,12 @@ export class App {
     reader.onload = async () => {
       const data = reader.result as string;
       try {
+        const token = localStorage.getItem('teachassist_token');
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const res = await fetch('/api/users/avatar', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ email: this.currentUser()?.email, avatar: data }),
         });
         const json = await res.json();
@@ -140,7 +143,10 @@ export class App {
     if (!email) return;
 
     try {
-      const res = await fetch('/api/users');
+      const token = localStorage.getItem('teachassist_token');
+      const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch('/api/users', { headers });
       if (!res.ok) return;
       const users = await res.json();
       const found = (users || []).find((u: any) => (u?.email || '').toString().trim().toLowerCase() === email);
