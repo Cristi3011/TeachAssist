@@ -38,15 +38,24 @@ export class StorageService {
     if (!this.enabled) {
       throw new BadRequestException('S3 storage not configured; uploads to S3 are required');
     }
-    const cmd = new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType });
+    const cmd = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType || 'application/octet-stream',
+    });
     return getSignedUrl(this.s3, cmd, { expiresIn: expiresSec });
   }
 
-  async getPresignedGetUrl(key: string, expiresSec = 900) {
+  async getPresignedGetUrl(key: string, expiresSec = 900, forceDownload = false, fileName?: string) {
     if (!this.enabled) {
       throw new BadRequestException('S3 storage not configured; cannot generate GET URL');
     }
-    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+    const cmdOpts: any = { Bucket: this.bucket, Key: key };
+    if (forceDownload) {
+      const finalFileName = (fileName || 'file').replace(/[^a-zA-Z0-9._-]/g, '_');
+      cmdOpts.ResponseContentDisposition = `attachment; filename="${finalFileName}"`;
+    }
+    const cmd = new GetObjectCommand(cmdOpts);
     return getSignedUrl(this.s3, cmd, { expiresIn: expiresSec });
   }
 

@@ -68,6 +68,14 @@ export class AttendancesController {
   async studentAttendanceHistory(@Query('email') email?: string, @Query('courseId') courseId?: string) {
     if (!email) throw new NotFoundException('email query param required');
     const list = await this.attendances.getStudentHistory(email, courseId ? Number(courseId) : undefined);
-    return list.map((r) => ({ id: r.id, sessionId: r.session.id, courseId: r.session.course.id, created_at: r.created_at, metadata: r.metadata }));
+    return list.map((r) => ({
+      id: r.id,
+      sessionId: r.session?.id,
+      courseId: r.session?.course?.id,
+      created_at: r.created_at,
+      metadata: r.metadata,
+      sessionStart: r.session?.startTime,
+      sessionEnd: r.session?.endTime,
+    }));
   }
 }

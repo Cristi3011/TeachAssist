@@ -43,10 +43,10 @@
             id="assignmentFile"
             type="file"
             class="file-input file-input--hidden"
-            accept=".pdf,.doc,.docx,.txt,.zip,.ppt,.pptx"
             (change)="onFileSelected($event)"
+            multiple
           />
-          <label for="assignmentFile" class="file-input-label">{{ selectedFile ? selectedFile.name : 'Adaugă fișier' }}</label>
+          <label for="assignmentFile" class="file-input-label">{{ selectedFiles.length ? selectedFilesLabel : 'Adaugă fișier' }}</label>
           <button class="btn-primary" type="button" (click)="submitFile()" [disabled]="submitInProgress || isPastDeadline">
             {{ submitInProgress ? 'Se trimite...' : 'Trimite fisier' }}
           </button>
@@ -55,45 +55,57 @@
           <p class="status-box status-box--error" style="padding:8px; margin:0; display:inline-block;">Termenul a expirat , nu se mai pot trimite teme.</p>
         </div>
 
-        <p class="muted-copy" *ngIf="selectedFile">Selectat: {{ selectedFile.name }}</p>
-          <p class="muted-copy submission-right" *ngIf="mySubmission">
-          Tema ta: {{ mySubmission.originalFileName }}
-          ({{ formatShortDate(mySubmission.created_at) }})
-          -
-          <a [href]="'/api/assignments/submissions/' + mySubmission.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
-          &nbsp;·&nbsp;
-          <a [href]="'/api/assignments/submissions/' + mySubmission.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
-          <span *ngIf="mySubmission.grade !== undefined && mySubmission.grade !== null" style="margin-left:12px; color:#0b6; font-weight:700;">Nota: {{ mySubmission.grade }}</span>
-          <span *ngIf="mySubmission.grade === null || mySubmission.grade === undefined" style="margin-left:12px; color:#6b7280;">(fără notă)</span>
-        </p>
+        <p class="muted-copy" *ngIf="selectedFiles.length">Selectat: {{ selectedFilesLabel }}</p>
+        <div *ngIf="mySubmissions.length; else noUserSubmissions" class="muted-copy submission-right">
+          <p style="margin:0; font-weight:600;">Predari existente:</p>
+          <ul style="margin:4px 0 0 0; padding-left:16px;">
+            <li *ngFor="let submission of mySubmissions">
+              {{ submission.originalFileName }} ({{ formatShortDate(submission.created_at) }})
+              - <a [href]="'/api/assignments/submissions/' + submission.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+              &nbsp;·&nbsp;
+              <a [href]="'/api/assignments/submissions/' + submission.id + '/file?download=true'" rel="noopener noreferrer">descarcă</a>
+            </li>
+          </ul>
+          <div *ngIf="myAssignmentGrade !== null" style="margin-top:8px; font-weight:700; color:#0b6;">Nota tema: {{ myAssignmentGrade }}</div>
+        </div>
+        <ng-template #noUserSubmissions>
+          <p class="muted-copy">Nu există predări încă. Alege fișiere și trimite tema.</p>
+        </ng-template>
       </section>
 
       <section class="section-block panel" *ngIf="assignment.kind === 'assignment' && role === 'professor'">
         <h2>Teme predate</h2>
-        <div *ngIf="submissions.length > 0; else noSubmissionsTpl">
+        <div *ngIf="studentSubmissionRows.length > 0; else noSubmissionsTpl">
           <ul class="submissions-list">
-            <li *ngFor="let s of submissions; trackBy: trackById">
+            <li *ngFor="let row of studentSubmissionRows; trackBy: trackByStudentEmail">
               <div
                 class="submission-line"
-                (click)="selectedStudentForComment = s.studentEmail"
-                [class.selected]="selectedStudentForComment === s.studentEmail"
+                (click)="selectedStudentForComment = row.studentEmail"
+                [class.selected]="selectedStudentForComment === row.studentEmail"
               >
                 <div class="submission-left">
-                    <strong>{{ s.studentName || s.studentEmail }}</strong>
-                  <div class="muted-copy">{{ s.originalFileName }}</div>
+                  <strong>{{ row.studentName }}</strong>
+                  <div class="muted-copy">Fișiere încărcate: {{ row.submissions.length }}</div>
                 </div>
-                  <div class="submission-right">
-                    <div class="muted-copy">{{ formatShortDate(s.created_at) }}</div>
-                    <a [href]="'/api/assignments/submissions/' + s.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
+                <div class="submission-right">
+                  <div class="muted-copy">Ultima încărcare: {{ formatShortDate(row.latestSubmission.created_at) }}</div>
+                  <label class="grade-controls" style="margin-left:8px; display:inline-flex; align-items:center; gap:8px;">
+                    <input class="grade-input" type="number" [(ngModel)]="gradeDrafts[row.latestSubmission.id]" [min]="0" [max]="assignment?.max_points || assignment?.maxPoints || 100" />
+                    <button class="btn-primary grade-btn" type="button" (click)="gradeSubmission(row.latestSubmission.id)">Salvează</button>
+                  </label>
+                  <div *ngIf="row.grade !== null" class="grade-display">Nota: {{ row.grade }} </div>
+                </div>
+              </div>
+              <div class="muted-copy" style="padding-left:24px; margin-top:8px;">
+                <div style="font-weight:600; margin-bottom:4px;">Fișiere:</div>
+                <ul style="margin:0; padding-left:16px;">
+                  <li *ngFor="let file of row.submissions" style="margin-bottom:6px;">
+                    <strong>{{ file.originalFileName }}</strong> ({{ formatShortDate(file.created_at) }})
+                    - <a [href]="'/api/assignments/submissions/' + file.id + '/file'" target="_blank" rel="noopener noreferrer">vizualizează</a>
                     &nbsp;·&nbsp;
-                    <a [href]="'/api/assignments/submissions/' + s.id + '/file?download=1'" target="_blank" rel="noopener noreferrer">descarcă</a>
-                    &nbsp;·&nbsp;
-                    <label class="grade-controls" style="margin-left:8px; display:inline-flex; align-items:center; gap:8px;">
-                      <input class="grade-input" type="number" [(ngModel)]="gradeDrafts[s.id]" [min]="0" [max]="assignment?.max_points || assignment?.maxPoints || 100" />
-                      <button class="btn-primary grade-btn" type="button" (click)="gradeSubmission(s.id)">Salvează</button>
-                    </label>
-                        <div *ngIf="s.grade !== undefined && s.grade !== null" class="grade-display">Nota: {{ s.grade }} </div>
-                  </div>
+                    <a [href]="'/api/assignments/submissions/' + file.id + '/file?download=true'" rel="noopener noreferrer">descarcă</a>
+                  </li>
+                </ul>
               </div>
             </li>
           </ul>

@@ -86,7 +86,10 @@ export class AttendancesService {
   async getStudentHistory(studentEmail: string, courseId?: number) {
     const email = (studentEmail || '').toLowerCase().trim();
     if (!email) return [];
-    const qb = this.recordsRepo.createQueryBuilder('r').leftJoinAndSelect('r.session', 's').leftJoin('s.course', 'c').where('r.studentEmail = :email', { email });
+    const qb = this.recordsRepo.createQueryBuilder('r')
+      .leftJoinAndSelect('r.session', 's')
+      .leftJoinAndSelect('s.course', 'c')
+      .where('r.studentEmail = :email', { email });
     if (courseId) qb.andWhere('c.id = :courseId', { courseId });
     qb.orderBy('r.created_at', 'DESC');
     return qb.getMany();

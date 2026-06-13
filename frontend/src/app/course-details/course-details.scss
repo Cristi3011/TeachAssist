@@ -150,6 +150,14 @@ select {
   justify-content: center;
 }
 
+@media (max-width: 768px) {
+  .announcement-card .item-menu-list {
+    right: 0;
+    left: auto;
+    margin-right: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .hero-toolbar {
     flex-direction: column;
@@ -205,8 +213,8 @@ select {
 .hero-menu {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
   min-width: 170px;
+  max-width: calc(100vw - 20px);
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -625,6 +633,7 @@ select {
   right: 0;
   top: calc(100% + 8px);
   min-width: 140px;
+  max-width: calc(100vw - 20px);
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 10px;

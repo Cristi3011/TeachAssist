@@ -385,7 +385,11 @@ export class AssignmentsController {
   }
 
   @Get('submissions/:submissionId/file')
-  async download(@Param('submissionId') submissionId: string, @Res() res: Response) {
+async download(
+  @Param('submissionId') submissionId: string,
+  @Res() res: Response,
+  @Query('download') download?: string,
+) {
     const submission = await this.assignments.getSubmissionById(Number(submissionId));
     if (!submission) throw new NotFoundException('Submission not found');
     const key = submission.storedFileName;

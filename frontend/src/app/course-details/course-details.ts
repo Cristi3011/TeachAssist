@@ -19,6 +19,8 @@ export class CourseDetails {
   showAttendanceModal = false;
   attendanceDurationMinutes = 10;
   generatedAttendanceSession: any = null;
+  showStudentAttendanceModal = false;
+  studentAttendanceRecords: Array<any> = [];
   attendanceQrImageUrl = '';
   attendanceLink = '';
   countdownText = '';
@@ -283,6 +285,26 @@ export class CourseDetails {
     } catch (err: any) {
       this.alerts.error(err?.message || 'Network error');
     }
+  }
+
+  async openMyAttendance() {
+    if (!this.userEmail) return this.alerts.warning('Trebuie să te conectezi pentru a vedea prezențele');
+    try {
+      const res = await fetch(`/api/students/attendance?email=${encodeURIComponent(this.userEmail)}&courseId=${this.courseId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || 'Nu se pot prelua prezențele');
+      this.studentAttendanceRecords = Array.isArray(data) ? data : [];
+      this.showStudentAttendanceModal = true;
+      this.cdr.markForCheck();
+    } catch (err: any) {
+      this.alerts.error(err?.message || 'Network error');
+    }
+  }
+
+  closeStudentAttendanceModal() {
+    this.showStudentAttendanceModal = false;
+    this.studentAttendanceRecords = [];
+    this.cdr.markForCheck();
   }
 
   closeAttendanceHistoryModal() {
@@ -696,16 +718,17 @@ export class CourseDetails {
           const presignData = presignText ? JSON.parse(presignText) : null;
           if (!presignRes.ok || !presignData?.url || !presignData?.key) throw new Error((presignData && presignData.message) || 'Nu s-a putut genera link-ul de upload');
 
-          const uploadHeaders: any = { 'Content-Type': file.type || 'application/octet-stream' };
-          if (presignData.url && presignData.url.toString().includes('X-Amz-Content-Sha256=UNSIGNED-PAYLOAD')) {
-            uploadHeaders['x-amz-content-sha256'] = 'UNSIGNED-PAYLOAD';
-          }
           const uploadRes = await fetch(presignData.url, {
             method: 'PUT',
+            headers: {
+              'Content-Type': file.type || 'application/octet-stream',
+            },
             body: file,
-            headers: uploadHeaders,
           });
-          if (!uploadRes.ok) throw new Error('Eroare la upload-ul fișierului');
+          if (!uploadRes.ok) {
+            const uploadErrorText = await uploadRes.text();
+            throw new Error(uploadErrorText || 'Eroare la upload-ul fișierului');
+          }
 
           const confirmRes = await fetch(`/api/assignments/${created.id}/resource/confirm`, {
             method: 'POST',
@@ -947,7 +970,7 @@ export class CourseDetails {
     const h = date.getHours();
     const next = (h + 1) % 24;
     const pad = (n: number) => String(n).padStart(2, '0');
-    return `${pad(h)}-${pad(next)}`;
+    return `${pad(h)}:00 - ${pad(next)}:00`;
   }
 
   trackById(_: number, item: any) {

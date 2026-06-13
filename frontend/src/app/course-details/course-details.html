@@ -43,6 +43,10 @@
                 </div>
               </div>
             </div>
+
+            <div class="hero-toolbar" *ngIf="role === 'student'">
+              <button class="btn-secondary toolbar-btn" type="button" (click)="openMyAttendance()">Prezențele mele</button>
+            </div>
           </div>
         </div>
       </section>
@@ -213,6 +217,41 @@
 
 </div>
 
+  <div class="attendance-overlay" *ngIf="showStudentAttendanceModal">
+
+  <div class="attendance-modal">
+
+    <button
+      class="attendance-close"
+      (click)="closeStudentAttendanceModal()"
+      aria-label="Închide"
+    >
+      ✕
+    </button>
+
+    <div class="attendance-modal-header">
+      <div>
+        <p class="eyebrow">TeachAssist</p>
+        <h2>Prezențele mele</h2>
+        <p class="attendance-subtitle">Lista sesiunilor la care ai fost prezent.</p>
+      </div>
+    </div>
+
+    <div>
+      <div *ngIf="studentAttendanceRecords.length === 0" class="status-box">Nicio prezență găsită.</div>
+      <ul *ngIf="studentAttendanceRecords.length > 0" class="participants-list">
+        <li *ngFor="let r of studentAttendanceRecords">{{ formatShortDate(r.sessionStart) }} {{ formatHourInterval(r.sessionStart) }}</li>
+      </ul>
+
+      <div class="modal-actions">
+        <button class="btn-primary" type="button" (click)="closeStudentAttendanceModal()">Închide</button>
+      </div>
+    </div>
+
+  </div>
+
+  </div>
+
         <section class="panel" *ngIf="role === 'professor' && canEditCourse">
           <h2>Setări curs</h2>
           <div class="form-field">
@@ -305,13 +344,13 @@
               <label>Deadline (opțional)</label>
               <input type="date" [(ngModel)]="assignmentModel.dueDate" />
             </div>
-            <div class="form-field">
+            <div class="form-field" *ngIf="assignmentModel.kind === 'assignment'">
               <label>Punctaj maxim</label>
               <input type="number" min="1" max="1000" [(ngModel)]="assignmentModel.maxPoints" />
             </div>
             <div class="form-field" *ngIf="assignmentModel.kind === 'material'">
               <label>Adaugă PDF/material</label>
-              <input type="file" accept=".pdf,.doc,.docx,.txt" (change)="onAssignmentFileSelected($event)" />
+              <input type="file" (change)="onAssignmentFileSelected($event)" />
             </div>
             <button class="btn-primary" (click)="createAssignment()">Publica postarea</button>
           </div>
@@ -409,7 +448,7 @@
                     <label>Deadline (opțional)</label>
                     <input type="date" [(ngModel)]="editingAssignmentModel.dueDate" />
                   </div>
-                  <div class="form-field">
+                  <div class="form-field" *ngIf="editingAssignmentModel.kind === 'assignment'">
                     <label>Punctaj maxim</label>
                     <input type="number" min="1" max="1000" [(ngModel)]="editingAssignmentModel.maxPoints" />
                   </div>

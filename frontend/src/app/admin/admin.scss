@@ -66,13 +66,14 @@
 
 .invite-form-row {
   display: grid;
-  grid-template-columns: 1.3fr 0.8fr auto;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.8fr) auto;
   gap: 8px;
 }
 
 .invite-input,
 .invite-select {
   width: 100%;
+  min-width: 0;
   border: 1px solid #cfd8e7;
   border-radius: 10px;
   padding: 8px 10px;
@@ -94,6 +95,10 @@
 .invite-submit:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.invite-form-row > * {
+  min-width: 0;
 }
 
 .invites-list {
@@ -241,6 +246,10 @@
 @media (max-width: 720px) {
   .invite-form-row {
     grid-template-columns: 1fr;
+  }
+
+  .invite-submit {
+    width: 100%;
   }
 
   .invites-item,

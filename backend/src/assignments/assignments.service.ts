@@ -138,28 +138,29 @@ export class AssignmentsService {
     const assignment = await this.getById(assignmentId);
     if (!assignment) throw new NotFoundException('Assignment not found');
 
-    const existing = await this.submissionRepo.findOne({
-      where: { assignment: { id: assignmentId }, studentEmail: email } as any,
-      order: { created_at: 'DESC' },
+    console.log(`[saveSubmission] Creating new submission:`, {
+      assignmentId,
+      studentEmail: email,
+      originalFileName: file.originalFileName,
+      storedFileName: file.storedFileName,
     });
 
-    if (existing) {
-      existing.originalFileName = file.originalFileName;
-      existing.storedFileName = file.storedFileName;
-      existing.mimeType = file.mimeType;
-      existing.sizeBytes = String(file.sizeBytes || 0);
-      return this.submissionRepo.save(existing);
-    }
-
     const created = this.submissionRepo.create({
-      assignment,
       studentEmail: email,
       originalFileName: file.originalFileName,
       storedFileName: file.storedFileName,
       mimeType: file.mimeType,
       sizeBytes: String(file.sizeBytes || 0),
+      assignment, 
     });
-    return this.submissionRepo.save(created);
+    
+    const saved = await this.submissionRepo.save(created);
+    console.log(`[saveSubmission] Saved submission:`, {
+      id: saved.id,
+      originalFileName: saved.originalFileName,
+      created_at: saved.created_at,
+    });
+    return saved;
   }
 
   async setSubmissionGrade(submissionId: number, graderEmail: string | null, grade: number | null) {
@@ -210,6 +211,15 @@ export class AssignmentsService {
     const email = (studentEmail || '').toLowerCase().trim();
     if (!email || !assignmentId) return null;
     return this.submissionRepo.findOne({
+      where: { assignment: { id: assignmentId }, studentEmail: email } as any,
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async listStudentSubmissionsForAssignment(assignmentId: number, studentEmail: string) {
+    const email = (studentEmail || '').toLowerCase().trim();
+    if (!email || !assignmentId) return [];
+    return this.submissionRepo.find({
       where: { assignment: { id: assignmentId }, studentEmail: email } as any,
       order: { created_at: 'DESC' },
     });

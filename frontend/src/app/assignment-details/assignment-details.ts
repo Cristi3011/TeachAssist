@@ -22,9 +22,9 @@ export class AssignmentDetails {
   error: string | null = null;
 
   assignment: any = null;
-  selectedFile: File | null = null;
+  selectedFiles: File[] = [];
   submitInProgress = false;
-  mySubmission: any = null;
+  mySubmissions: Array<any> = [];
   submissions: Array<any> = [];
   gradeDrafts: { [submissionId: number]: number | null } = {};
   allComments: Array<any> = [];
@@ -148,6 +148,37 @@ export class AssignmentDetails {
     }
   }
 
+  get studentSubmissionRows() {
+    const grouped: Record<string, any[]> = {};
+    for (const submission of this.submissions || []) {
+      const email = submission.studentEmail || '';
+      if (!grouped[email]) grouped[email] = [];
+      grouped[email].push(submission);
+    }
+
+    return Object.entries(grouped).map(([studentEmail, submissions]) => {
+      const sorted = [...submissions].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
+      const latestSubmission = sorted[0];
+      const gradedSubmission = sorted.find((s) => s.grade !== null && s.grade !== undefined) || null;
+      return {
+        studentEmail,
+        studentName: latestSubmission.studentName || studentEmail,
+        latestSubmission,
+        submissions: sorted,
+        grade: gradedSubmission ? gradedSubmission.grade : null,
+      };
+    });
+  }
+
+  get myAssignmentGrade(): number | null {
+    const graded = (this.mySubmissions || []).find((s) => s.grade !== null && s.grade !== undefined);
+    return graded ? graded.grade : null;
+  }
+
   async loadAssignment() {
     const res = await fetch(`/api/assignments/${this.assignmentId}`);
     const text = await res.text();
@@ -158,13 +189,54 @@ export class AssignmentDetails {
 
   async loadMySubmission() {
     if (!this.userEmail) return;
-    const res = await fetch(
-      `/api/assignments/${this.assignmentId}/submissions/mine?studentEmail=${encodeURIComponent(this.userEmail)}`,
-    );
-    const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
-    if (!res.ok) throw new Error((data && data.message) || 'Nu se poate incarca predarea');
-    this.mySubmission = data || null;
+
+    const assignmentUrl = `/api/assignments/${this.assignmentId}/submissions/mine?studentEmail=${encodeURIComponent(
+      this.userEmail,
+    )}`;
+    const fallbackUrl = `/api/assignments/submissions/mine?courseId=${encodeURIComponent(String(this.courseId))}&studentEmail=${encodeURIComponent(
+      this.userEmail,
+    )}`;
+
+    const tryLoad = async (url: string) => {
+      const res = await fetch(url);
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!res.ok) {
+        throw new Error((data && data.message) || 'Nu se poate incarca predarea');
+      }
+      return Array.isArray(data) ? data : [];
+    };
+
+    const submissionsById = new Map<number, any>();
+
+    try {
+      const data = await tryLoad(assignmentUrl);
+      for (const item of data) {
+        submissionsById.set(Number(item.id), item);
+      }
+    } catch {
+      // ignore and continue with fallback
+    }
+
+    try {
+      const data = await tryLoad(fallbackUrl);
+      for (const item of data) {
+        if (Number(item.assignmentId) !== this.assignmentId) continue;
+        submissionsById.set(Number(item.id), item);
+      }
+    } catch (err: any) {
+      if (!submissionsById.size) {
+        this.mySubmissions = [];
+        console.warn('Could not load student submissions', err?.message || err);
+        return;
+      }
+    }
+
+    this.mySubmissions = Array.from(submissionsById.values()).sort((a, b) => {
+      const aTime = new Date(a.created_at).getTime();
+      const bTime = new Date(b.created_at).getTime();
+      return bTime - aTime;
+    });
   }
 
   async loadComments() {
@@ -180,7 +252,18 @@ export class AssignmentDetails {
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
-    this.selectedFile = input?.files?.[0] || null;
+    if (!input?.files?.length) {
+      this.selectedFiles = [];
+      return;
+    }
+    this.selectedFiles = Array.from(input.files);
+  }
+
+  get selectedFilesLabel(): string {
+    return this.selectedFiles
+      .map((file) => file?.name || '')
+      .filter((name) => !!name)
+      .join(', ');
   }
 
   async submitFile() {
@@ -188,8 +271,8 @@ export class AssignmentDetails {
       this.alerts.error('Nu esti autentificat');
       return;
     }
-    if (!this.selectedFile) {
-      this.alerts.warning('Alege mai intai un fisier');
+    if (!this.selectedFiles.length) {
+      this.alerts.warning('Alege mai intai cel putin un fisier');
       return;
     }
     if (this.isPastDeadline) {
@@ -203,41 +286,49 @@ export class AssignmentDetails {
       const authHeaders: any = {};
       if (token) authHeaders['Authorization'] = `Bearer ${token}`;
 
-      // 1) request presigned PUT URL from backend
-      const presignRes = await fetch(`/api/assignments/${this.assignmentId}/submissions/presign`, {
-        method: 'POST',
-        headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: this.selectedFile.name, contentType: this.selectedFile.type }),
-      });
-      const presignText = await presignRes.text();
-      const presignData = presignText ? JSON.parse(presignText) : null;
-      if (!presignRes.ok || !presignData?.url || !presignData?.key) throw new Error((presignData && presignData.message) || 'Nu s-a putut genera link-ul de upload');
+      const createdSubmissions: any[] = [];
+      for (const file of this.selectedFiles) {
+        // 1) request presigned PUT URL from backend
+        const presignRes = await fetch(`/api/assignments/${this.assignmentId}/submissions/presign`, {
+          method: 'POST',
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, contentType: file.type }),
+        });
+        const presignText = await presignRes.text();
+        const presignData = presignText ? JSON.parse(presignText) : null;
+        if (!presignRes.ok || !presignData?.url || !presignData?.key) throw new Error((presignData && presignData.message) || 'Nu s-a putut genera link-ul de upload');
 
-      // 2) upload file directly to S3 (no auth header)
-      const uploadHeaders: any = { 'Content-Type': this.selectedFile.type || 'application/octet-stream' };
-      if (presignData.url && presignData.url.toString().includes('X-Amz-Content-Sha256=UNSIGNED-PAYLOAD')) {
-        uploadHeaders['x-amz-content-sha256'] = 'UNSIGNED-PAYLOAD';
+        // 2) upload file directly to S3 (no auth header)
+        const uploadRes = await fetch(presignData.url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream',
+          },
+          body: file,
+        });
+        if (!uploadRes.ok) {
+          const uploadErrorText = await uploadRes.text();
+          throw new Error(uploadErrorText || 'Eroare la upload-ul fișierului');
+        }
+
+        // 3) confirm submission metadata to backend (store only metadata)
+        const submitRes = await fetch(`/api/assignments/${this.assignmentId}/submissions`, {
+          method: 'POST',
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentEmail: this.userEmail, key: presignData.key, originalFileName: file.name, mimeType: file.type, sizeBytes: file.size }),
+        });
+        const submitText = await submitRes.text();
+        const submitData = submitText ? JSON.parse(submitText) : null;
+        if (!submitRes.ok) throw new Error((submitData && submitData.message) || 'Nu s-a putut confirma predarea');
+
+        if (submitData && submitData.submission) {
+          createdSubmissions.push(submitData.submission);
+        }
       }
-      const uploadRes = await fetch(presignData.url, {
-        method: 'PUT',
-        body: this.selectedFile,
-        headers: uploadHeaders,
-      });
-      if (!uploadRes.ok) throw new Error('Eroare la upload-ul fișierului');
 
-      // 3) confirm submission metadata to backend (store only metadata)
-      const submitRes = await fetch(`/api/assignments/${this.assignmentId}/submissions`, {
-        method: 'POST',
-        headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentEmail: this.userEmail, key: presignData.key, originalFileName: this.selectedFile.name, mimeType: this.selectedFile.type, sizeBytes: this.selectedFile.size }),
-      });
-      const submitText = await submitRes.text();
-      const submitData = submitText ? JSON.parse(submitText) : null;
-      if (!submitRes.ok) throw new Error((submitData && submitData.message) || 'Nu s-a putut confirma predarea');
-
-      this.mySubmission = (submitData && submitData.submission) ? submitData.submission : null;
-      this.selectedFile = null;
-      this.alerts.success('Fisier trimis cu succes');
+      this.mySubmissions = [...this.mySubmissions, ...createdSubmissions];
+      this.selectedFiles = [];
+      this.alerts.success('Fisiere trimise cu succes');
     } catch (err: any) {
       this.alerts.error(err?.message || 'Network error');
     } finally {
@@ -353,6 +444,10 @@ export class AssignmentDetails {
 
   trackById(_: number, item: any) {
     return item.id;
+  }
+
+  trackByStudentEmail(_: number, item: any) {
+    return item.studentEmail;
   }
 
   autoResizeTextarea(event: Event) {

@@ -31,16 +31,82 @@
 $ npm install
 ```
 
+## S3 configuration
+
+File uploads use S3. Create `backend/.env` with these values:
+
+- `AWS_REGION=eu-central-1`
+- `S3_BUCKET=teachassist`
+- `AWS_ACCESS_KEY_ID=...`
+- `AWS_SECRET_ACCESS_KEY=...`
+- `S3_ENDPOINT=https://s3.eu-central-1.idrivee2.com`
+- `S3_FORCE_PATH_STYLE=true`
+
+## Bucket CORS
+
+Because uploads are sent directly from the browser to IDrive e2, the bucket must allow CORS for the exact frontend origin your browser uses.
+
+If your Angular dev server is started with `--host 0.0.0.0`, the browser origin may be `http://0.0.0.0:4200` or a local network address. Use the exact origin from your browser address bar.
+
+Add a CORS rule like this to the `teachassist` bucket:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <CORSRule>
+    <AllowedOrigin>http://localhost:4200</AllowedOrigin>
+    <AllowedOrigin>http://127.0.0.1:4200</AllowedOrigin>
+    <AllowedOrigin>http://0.0.0.0:4200</AllowedOrigin>
+    <AllowedMethod>GET</AllowedMethod>
+    <AllowedMethod>PUT</AllowedMethod>
+    <AllowedMethod>HEAD</AllowedMethod>
+    <AllowedHeader>*</AllowedHeader>
+    <ExposeHeader>ETag</ExposeHeader>
+  </CORSRule>
+</CORSConfiguration>
+```
+
+If your provider requires JSON-style CORS configuration, the equivalent rule is:
+
+```json
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["*"],
+      "AllowedMethods": ["GET", "PUT", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"]
+    }
+  ]
+}
+```
+
+If the browser origin still does not match or you are testing from a different host, try allowing all origins temporarily:
+
+```json
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["*"],
+      "AllowedMethods": ["GET", "PUT", "HEAD"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"]
+    }
+  ]
+}
+```
+
+Use `*` only for testing; prefer the exact origin used by your browser in production.
+
 ## Compile and run the project
 
 ```bash
-# development
+
 $ npm run start
 
-# watch mode
+
 $ npm run start:dev
 
-# production mode
 $ npm run start:prod
 ```
 
